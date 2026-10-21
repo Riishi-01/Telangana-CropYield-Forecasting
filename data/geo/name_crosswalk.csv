@@ -1,0 +1,33 @@
+des_name,district_slug,geojson_name,match_method
+Adilabad,adilabad,Adilabad,exact_normalised
+Bhadradri,bhadradri,Bhadradri Kothagudem,alias_table
+Jagitial,jagitial,Jagitial,exact_normalised
+Jangoan,jangoan,Jangaon,alias_table
+Jayashankar,jayashankar,Jayashankar Bhupalapally,alias_table
+Jogulamba,jogulamba,Jogulamba Gadwal,alias_table
+Kamareddy,kamareddy,Kamareddy,exact_normalised
+Karimnagar,karimnagar,Karimnagar,exact_normalised
+Khammam,khammam,Khammam,exact_normalised
+Komaram bheem asifabad,komaram bheem asifabad,Komarambheem Asifabad,alias_table
+Mahabubabad,mahabubabad,Mahabubabad,exact_normalised
+Mahbubnagar,mahbubnagar,Mahabubnagar,alias_table
+Mancherial,mancherial,Mancherial,exact_normalised
+Medak,medak,Medak,exact_normalised
+Medchal,medchal,Medchal Malkajgiri,alias_table
+Mulugu,mulugu,Mulugu,exact_normalised
+Nagarkurnool,nagarkurnool,Nagarkurnool,exact_normalised
+Nalgonda,nalgonda,Nalgonda,exact_normalised
+Narayanapet,narayanapet,Narayanpet,alias_table
+Nirmal,nirmal,Nirmal,exact_normalised
+Nizamabad,nizamabad,Nizamabad,exact_normalised
+Peddapalli,peddapalli,Peddapalli,exact_normalised
+Rajanna,rajanna,Rajanna Sircilla,alias_table
+Rangareddi,rangareddi,Rangareddy,alias_table
+Sangareddy,sangareddy,Sangareddy,exact_normalised
+Siddipet,siddipet,Siddipet,exact_normalised
+Suryapet,suryapet,Suryapet,exact_normalised
+Vikarabad,vikarabad,Vikarabad,exact_normalised
+Wanaparthy,wanaparthy,Wanaparthy,exact_normalised
+Warangal,warangal,Warangal Rural,alias_table
+Warangal urban,warangal urban,Warangal Urban,alias_table
+Yadadri,yadadri,Yadadri Bhuvanagiri,alias_table
