@@ -1,0 +1,94 @@
+# telangana-agromet — .gitignore
+# Authority: plan/SRS.md §8.1 (git policy) and plan/GUIDE.md Step 1.3.
+# Rationale: data blobs stay out of git; reproducibility is carried by the
+# manifests + checksums under data/manifests/, which ARE tracked.
+
+# ---------------------------------------------------------------- OS / editor
+.DS_Store
+.AppleDouble
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# ------------------------------------------------------- Python environment
+.venv/
+venv/
+env/
+.python-version
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.dmypy.json
+
+# --------------------------------------------------------------- Notebooks
+.ipynb_checkpoints/
+
+# ---------------------------------------------- Data blobs (SRS §8.1 "Large data")
+# Raw is immutable and append-only, but it is not committed. The SHA-256 of every
+# raw file is recorded in data/manifests/checksums.sha256 instead.
+/data/raw/
+/data/interim/
+/data/processed/
+
+# The user-supplied DES attachment. It is copied into data/raw/des/ by
+# GUIDE Step 3.1 and checksummed there; committing both copies would duplicate
+# ~1 MB of the same blob. Provenance lives in the manifest.
+/data/*.xls
+/data/*.xlsx
+/data/*.csv
+
+# TRACKED on purpose (do not add these to the ignore list):
+#   data/manifests/   fetch_manifest.json, checksums.sha256, BLOCKERS.md
+#   data/geo/         districts.csv, districts.geojson, PARTITION_NOTE.md
+#   DATA_VERSION
+
+# Stray spreadsheet lock files from Excel/Numbers on macOS
+~$*
+.~lock.*
+
+# ----------------------------------------------------------- Secrets (C4/C5)
+# This project needs none. The rule exists so none can appear.
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials.json
+
+# ------------------------------------------------- Dashboard / site build
+node_modules/
+dashboard/_site/
+dashboard/.cache/
+.vite/
+*.log
+
+# --------------------------------------------------------- Logs & scratch
+logs/
+*.log
+tmp/
+scratch/
+*.tmp
+*.bak
+*.swp
+.~*.swx
+
+# Large generated binaries anywhere (belt-and-braces; normally already
+# excluded by the /data/ rules above)
+*.parquet
+*.feather
+*.joblib
+*.pkl
+*.h5
+*.nc
+*.zip
+*.tar.gz
