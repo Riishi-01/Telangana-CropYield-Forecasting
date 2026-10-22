@@ -39,7 +39,7 @@ one of them carries its out-of-sample skill score.
 > relationships reported below may be a consequence of that buffering rather
 > than of rainfall being unimportant. This is the leading candidate
 > explanation for the null results and it is **untested** here. See
-> [Limitations](#7-limitations--all-fifteen).
+> [Limitations](#7-limitations--all-nineteen).
 
 ---
 
@@ -524,29 +524,22 @@ its own fixed colour domain per crop — the predictions occupy the middle of
 the observed range, so on the observed scale they would all land in one pale
 band.
 
-**The state in one table.** Above the district table, the state totals for the
-four crops and the kharif rainfall, against the Telangana average:
+**The state in one table.** The state totals for the four crops and the kharif
+rainfall, against the Telangana average:
 
-| | 2026 | State avg | Rainfall 2026 | Rainfall avg | |
-|---|---|---|---|---|---|
-| **Cotton (lint)** | 4.11 M bales | 5.35 M bales | 454 mm | 836 mm | ↓ 23.3 % / ↓ 45.7 % |
-| **Arhar / Tur** | 0.191 M t | 0.175 M t | 477 mm | 794 mm | ↑ 8.6 % / ↓ 40.0 % |
-| **Moong (green gram)** | 0.020 M t | 0.017 M t | 435 mm | 823 mm | ↑ 22.4 % / ↓ 47.2 % |
-| **Rice** | 8.29 M t | 8.75 M t | 459 mm | 844 mm | ↓ 5.3 % / ↓ 45.6 % |
-| **Kharif rainfall (state)** | 488 mm | 848 mm | — | — | ↓ 42.5 % |
+| | 2026 | State avg | |
+|---|---|---|---|
+| **Cotton (lint)** | 4.11 M bales | 5.35 M bales | ↓ 23.3 % |
+| **Arhar / Tur** | 0.191 M t | 0.175 M t | ↑ 8.6 % |
+| **Moong (green gram)** | 0.020 M t | 0.017 M t | ↑ 22.4 % |
+| **Rice** | 8.29 M t | 8.75 M t | ↓ 5.3 % |
+| **Kharif rainfall** | 488 mm | 848 mm | ↓ 42.5 % |
 
 The yield totals are the area-weighted state yield per hectare applied to each
 district's 2022-23 kharif area; the average column is the Telangana average on
-that same area, so the two columns differ only by the model's skill.
-
-**The rainfall beside a crop is the rainfall over that crop's own area.** The
-state mean is the same figure for every crop, so it would say nothing beside a
-crop; each crop is grown on a different area, and the rainfall over that area
-differs — 435 mm for moong against 477 mm for arhar. The 2026 figure weights
-the observed 2026 rainfall by the crop's 2022-23 area; the average is the mean
-over 2014-15 to 2022-23 of the crop's area-weighted seasonal rainfall. The last
-row is the state-wide figure: 488 mm against a nine-season state mean of
-848 mm, so **2026 is the driest kharif season in the record**.
+that same area, so the two columns differ only by the model's skill. The
+rainfall average is the mean of the nine seasonal state means, 2014-15 to
+2022-23, against which **2026 is the driest kharif season in the record**.
 
 **A crop can be focused on it.** The chart's selector offers all four crops or
 one; with a single crop the district observations appear behind the line, so
@@ -588,13 +581,18 @@ where a season was dry *for that district* rather than for the state).
 
 The report reads in one direction: the map and the season readout establish what was
 observed; the forecast chart then states what the model predicts for 2026 and how well
-that model has performed out of sample; the districts table carries the prediction to
-district level; and "Does the weather model earn its place?" puts the model's value
-against the alternatives. The rainfall–yield response curve is reported in §5 and in
-F1–F3 rather than on the page: it is the evidence behind the forecast, and the page
-leads with the forecast itself.
+that model has performed out of sample; and "Does the weather model earn its place?"
+puts the model's value against the alternatives.
 
-## 7. Limitations — all fifteen
+**What the page does not carry, and where it lives instead.** The per-district 2026
+numbers are on the map — as colour, as the number on each polygon, and in the hover
+card — and in the CSV export, which is the full 32-row table; they are not printed
+as a list. The fifteen mandatory disclosures and the full set of limitations are in
+§7 below and in the README of the repository, not on the page. The rainfall–yield
+response curve is reported in §5 and in F1–F3. The page leads with the forecast, and
+this report carries the caveats.
+
+## 7. Limitations — all nineteen
 
 **Limitation 3 is the single biggest limitation in this analysis, and it is not a
 footnote.** No irrigation data is used anywhere. Telangana is heavily

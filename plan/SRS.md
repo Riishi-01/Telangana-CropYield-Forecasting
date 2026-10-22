@@ -314,11 +314,20 @@ section governs how they are produced, labelled and bounded.
 - Any prediction interval — with three holdout seasons there is not enough data
   to calibrate one honestly
 
-**Required labelling wherever 2026 appears:**
+**Required labelling wherever 2026 appears in the README:**
 > "2026 is a model prediction, not an observation and not a validated forecast. Each
 > crop is forecast by its own specification, selected by leave-one-season-out
 > cross-validation inside the fitting period; the out-of-sample skill of that
 > specification is printed beside every prediction."
+
+**On the dashboard (ERRATA C13).** The boxed 2026 disclaimer is retired from
+the page. The page must still label 2026 as a prediction wherever it appears,
+and it does: the season option reads `2026-27 (prediction)`, the map note
+reads `2026-27 (prediction) · <crop> · <metric>`, the season readout reads
+`2026-27 (prediction) · 32 districts predicted`, the hover card reads
+`2026-27 · prediction`, the forecast chart's 2026 segment is dashed, and the
+chart's foot states that the segment is a prediction and not an observation,
+and prints every crop's out-of-sample skill.
 
 **Model selection (ERRATA C10.2).** One specification per crop, chosen by
 leave-one-season-out cross-validation **inside the fitting period only**; the
@@ -547,7 +556,16 @@ Icons supplement colour and text. They do not replace either.
 
 ## 9. Mandatory disclosures
 
-These must appear verbatim in README and in any derived document. They are not optional.
+These must appear in the README, which is the report of record. They are not
+optional there.
+
+**Amended (ERRATA C13).** They were also required in "any derived document",
+which meant the interactive dashboard. The dashboard no longer carries the
+disclosure list, the provenance footer or the boxed 2026 disclaimer: the owner
+removed them from the page so that it presents the forecast without a wall of
+caveats. The README keeps all of them, in §7 and in §5.4, and this section is
+the authority for that set. A dashboard that is derived from this README must
+carry the 2026 labelling in §5.6; the rest of the list is the report's.
 
 1. **Reanalysis, not observation.** ERA5 is a model-assimilated reanalysis product at 0.25°
    (~25 km) resolution. It is not IMD station gauge data.

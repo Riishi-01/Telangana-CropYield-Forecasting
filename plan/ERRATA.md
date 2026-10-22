@@ -447,23 +447,53 @@ carries the 2026 predictions when the prediction layer is selected.
 
 ---
 
-## C13 — the state summary carries the rainfall over each crop's own area
+## C13 — the page presents the forecast: the districts table, the disclosure list and the disclaimer box are retired
 
-**C13.1 — a rainfall column beside every crop.** The state summary gains two
-columns: the kharif rainfall for 2026 and its average, beside the yield
-columns. The rainfall is **area-weighted over that crop's own area** — the
-2022-23 kharif area of the crop, weighted by the observed 2026 rainfall, with
-the average taken over 2014-15 to 2022-23 of the crop's area-weighted seasonal
-rainfall. The state mean is the same number for every crop, so repeating it
-four times would say nothing; each crop is grown on a different area and the
-rainfall over that area differs (435 mm for moong against 477 mm for arhar).
+**C13.1 — the districts table is retired from the page.** The 32-row
+`Districts · 2026-27 · 32 districts · bales/ha` table is removed, with its
+sorting, its five-column header and its click-through. The section it lived
+in is renamed **"2026 yield forecast Analysis"** and now carries the five-row
+state summary alone.
 
-**C13.2 — the state row stays.** The last row is still the state-wide figure:
-488 mm against a nine-season state mean of 848 mm, ↓ 42.5 %, and 2026 is the
-driest kharif season in the nine-season record. The two averages share a
-period — 2014-15 to 2022-23 — so the crop rows and the state row are
-comparable, and the crop rows are computed over the full nine-season record
-rather than the primary panel.
+The per-district 2026 numbers are not lost, but they are no longer a list you
+can scan or sort side by side. They live in three places: the **map**, as
+colour and as the number on each polygon; the **hover card**, which carries
+the predicted yield per hectare, the state average, the difference against the
+state, the 2026 rainfall, the deficit against that district's own median and
+the 2022-23 area baseline; and the **CSV export**, which is the full 32-row
+table as a download. The export is unaffected by the retirement: it builds its
+rows from the data, not from the DOM.
+
+**C13.2 — the disclosure list and the provenance footer are retired.** The
+`What this is not` heading, the fifteen-item disclosure list and the
+colophon provenance strip are removed from the page. The **README keeps all
+fifteen disclosures** (§7 and §5.4), and SRS §9 is amended so that the
+requirement reads "in the README" rather than "in the README and in any
+derived document". The bundle still ships the disclosure set as the
+machine-readable record of what applied to that build, and the verifier
+asserts that the report carries every one of them.
+
+**C13.3 — the boxed 2026 disclaimer is retired.** The vermillion box under
+the forecast chart is removed. The page must still label 2026 as a
+prediction, and it does, in six places: the season option reads
+`2026-27 (prediction)`, the map note reads `2026-27 (prediction)`, the season
+readout reads `2026-27 (prediction) · 32 districts predicted`, the hover card
+reads `2026-27 · prediction`, the forecast chart's 2026 segment is dashed, and
+the chart's foot states that the segment is a prediction and not an
+observation, and prints every crop's out-of-sample skill score.
+
+**This is the one change in the project's history that removes a caveat from
+a published artefact rather than adding one.** The page now carries no
+disclosure list and no boxed caveat. The report of record — the README —
+carries all of it, and the chart's foot keeps the prediction framing, the
+area-basis assumption and the skill caveat. It is recorded here so that the
+decision is on the record rather than silent.
+
+**C13.4 — the point-description panel loses its table trigger.** The panel
+under the forecast chart is opened by clicking the 2026 diamond on the chart
+or a district observation when a single crop is focused. The QA harness now
+drives it through the real hover machinery and the click event Plotly emits,
+rather than through a table row.
 
 ---
 
@@ -484,7 +514,7 @@ rather than the primary panel.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 56 headless checks |
+| G11 dashboard QA | **PASS** — 55 headless checks |
 | G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
@@ -498,9 +528,11 @@ rather than the primary panel.
 | **G11e 2026 area baseline stated (C10.4)** | **PASS** — 2022-23 area, applied identically to both sides |
 | **G11f one forecast chart, indexed (C11.2, C11.3)** | **PASS** — 1 chart, All + 4 crop ticks, 10 x categories with 2026 last, 4 dashed 2026 segments |
 | **G11g the retired sections are gone (C11.1, C11.4)** | **PASS** — no `#curveChart`, no `#districtTable`, no `#forecastGrid` in the DOM |
-| **G11h the 2026 districts table is kept (C11.2)** | **PASS** — "2026-27 · 32 districts · bales/ha" unchanged |
+| **G11h the 2026 districts table is kept (C11.2)** | **SUPERSEDED (C13)** — retired from the page in v1.2.1; the per-district numbers are on the map, in the hover card and in the CSV |
 | **G11i the map opens on the prediction (C12.1)** | **PASS** — default season 2026-27 (prediction), cotton, absolute yield |
 | **G11j the state summary agrees with the artefacts (C12.4)** | **PASS** — 5 rows; every 2026 and average total matches `forecast_series.json` |
 | **G11k the rainfall base and label (C12.5)** | **PASS** — 848 mm base from `rain_state`; 488 mm is −42.5 % |
-| **G11l the crop rainfall columns (C13.1)** | **PASS** — 4 crops × (2026, average) rainfall, each over that crop's own area |
+| **G11l the districts table is retired (C13.1)** | **PASS** — no `#forecastTable` in the DOM |
+| **G11m the disclosure footer and the disclaimer box are retired (C13.2, C13.3)** | **PASS** — no `#disclosureList`, no `footer.colophon`, no `#markerDisclaimer` |
+| **G11n the page still labels 2026 as a prediction (C13.3)** | **PASS** — the season option, the map note, the readout note and the hover card all carry it |
 | G13 local commits clean; no push | **PASS** — no remote configured |
