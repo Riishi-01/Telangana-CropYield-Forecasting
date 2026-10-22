@@ -3,48 +3,20 @@
     "06-01",
     "09-30"
   ],
-  "artifact": "panel_v1.0.0.parquet",
+  "artifact": "panel_v1.1.0.parquet",
   "centroid_method": [
     "era5_grid_area_weighted_centroid"
   ],
-  "created_utc": "2026-10-22T01:46:52+00:00",
+  "clean_dataset": "crops_kharif_clean",
+  "clean_dataset_sha256": "59a137dab1a1a9eaee4657b1a10fd5a409868db992513836ee18c3bc36fc51e1",
+  "created_utc": "2026-10-22T03:21:03+00:00",
   "crops": [
-    "Arhar/Tur",
-    "Bajra",
-    "Banana",
-    "Cashewnut",
-    "Castor seed",
-    "Coriander",
     "Cotton(lint)",
-    "Cowpea(Lobia)",
-    "Dry chillies",
-    "Ginger",
-    "Gram",
-    "Groundnut",
-    "Horse-gram",
-    "Jowar",
-    "Maize",
+    "Arhar/Tur",
     "Moong(Green Gram)",
-    "Oilseeds total",
-    "Onion",
-    "Other Kharif pulses",
-    "Potato",
-    "Ragi",
-    "Rice",
-    "Safflower",
-    "Sesamum",
-    "Small millets",
-    "Soyabean",
-    "Sugarcane",
-    "Sunflower",
-    "Sweet potato",
-    "Tobacco",
-    "Turmeric",
-    "Urad",
-    "Wheat",
-    "other oilseeds"
+    "Rice"
   ],
-  "data_version": "1.0.0",
+  "data_version": "1.1.0",
   "districts": 32,
   "dry_spell_window": [
     "06-01",
@@ -56,21 +28,15 @@
   ],
   "geojson_sha256": "e228271e9929f7167bc1327f0b0faba5c17fb94dc999ac9c026293b4e9dfd1e1",
   "geojson_source_url": "https://raw.githubusercontent.com/gpavanb1/Telangana-Visualisation/master/data/Telangana.geojson",
-  "modelled_crops": [
-    "Cotton(lint)",
-    "Arhar/Tur",
-    "Moong(Green Gram)",
-    "Rice"
-  ],
   "primary_panel": [
     "2016-17",
     "2022-23"
   ],
   "pythonhashseed": "0",
-  "rows": 3185,
-  "rows_primary_panel": 2867,
+  "rows": 940,
+  "rows_primary_panel": 868,
   "seed": 0,
-  "sha256": "c35be46fbad21406c8aeccc7dfeaaa0acf85585377b06f4a212e90f1e061eddd",
+  "sha256": "516cbfc76cb5048ba410e768ae48b35eab01db626561b7f2840b6336031066fc",
   "temp_window": [
     "2014-06-01",
     "2023-10-31"
@@ -84,12 +50,11 @@
     "2019-20"
   ],
   "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
-  "weather_fetched_utc": "2026-10-22T01:44:57+00:00",
+  "weather_fetched_utc": "2026-10-22T03:21:02+00:00",
   "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
   "weather_rows": 113984,
   "weather_sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
   "weather_source": "open-meteo/era5",
   "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
-  "yield_rows": 3185,
-  "yield_source": "DES district-wise season-wise crop production (Govt. of India)"
+  "yield_source": "DES district-wise kharif crop production (Directorate of Economics & Statistics, Govt. of India)"
 }

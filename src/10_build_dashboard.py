@@ -77,7 +77,31 @@ def main() -> None:
     slug_index = {d["s"]: i for i, d in enumerate(districts)}
 
     seasons = sorted(primary["season"].unique().tolist())
-    crops = sorted(primary["crop"].unique().tolist())
+    # crop scope is the four target crops, in the canonical order
+    crops = [c for c in cfg.TARGET_CROPS if c in primary["crop"].unique()]
+
+    # per-district median kharif rainfall over the primary panel, used as the
+    # reference for the rainfall-deficit map metric (each district vs its own norm)
+    rain_ref = (
+        primary.drop_duplicates(subset=["district_slug", "season"])
+        .groupby("district_slug")["rain_mm"].median()
+    )
+    districts = [
+        {
+            **d,
+            "rmed": round_or_none(rain_ref.get(d["s"]), 1),
+        }
+        for d in districts
+    ]
+
+    # fixed domain for the deficit metric, computed across the whole panel so
+    # the scale never rescales between crops, seasons or districts
+    dd = primary.drop_duplicates(subset=["district_slug", "season"])
+    dd = dd[dd["district_slug"].isin(rain_ref.index)].copy()
+    dd["deficit"] = 100.0 * (
+        dd["rain_mm"] / dd["district_slug"].map(rain_ref) - 1.0
+    )
+    deficit_lim = round_or_none(max(abs(dd["deficit"].min()), abs(dd["deficit"].max())), 1)
 
     # -- panel matrix ---------------------------------------------------------
     # panel[crop][season] -> array aligned with `districts`
@@ -165,7 +189,12 @@ def main() -> None:
     marker_path = cfg.INTERIM / "features_2026.parquet"
     if marker_path.exists():
         m = pd.read_parquet(marker_path)
-        hist = primary["rain_mm"]
+        # Rainfall is a district-season variable, so the historical distribution
+        # it is compared against must count each district-season once - the
+        # panel repeats it once per crop.
+        hist = (
+            primary.drop_duplicates(subset=["district_slug", "season"])["rain_mm"]
+        )
         marker = {
             "available": True,
             "per_district": {
@@ -251,17 +280,44 @@ def main() -> None:
         },
     }
 
+    # -- window sensitivity (optional; present once step 12 has run) ----------
+    window_sensitivity = {"available": False}
+    ws_path = cfg.PROCESSED / "window_sensitivity.json"
+    if ws_path.exists():
+        ws = cfg.read_json(ws_path)
+        window_sensitivity = {
+            "available": True,
+            "windows": {k: v["label"] for k, v in ws["windows"].items()},
+            "window_order": ["jul_sep", "jun_sep", "jun_oct"],
+            "crops": {
+                crop: {
+                    w: {
+                        "p2": r["p2"],
+                        "r2": r["r2"],
+                        "vertex_reported": r["vertex_reported"],
+                        "vertex_mm": r["vertex_mm"],
+                        "n": r["n"],
+                    }
+                    for w, r in ws["crops"][crop].items()
+                }
+                for crop in crops
+                if crop in ws["crops"]
+            },
+        }
+
     bundle = {
         "meta": meta,
         "crops": crops,
-        "modelled_crops": cfg.MODELLED_CROPS,
+        "crop_labels": cfg.CROP_LABELS,
+        "modelled_crops": [c for c in cfg.MODELLED_CROPS if c in crops],
         "seasons": seasons,
         "districts": districts,
         "panel": panel_data,
         "series": series,
         "models": models,
-        "domains": domains,
+        "domains": {**domains, "deficit": [-deficit_lim, deficit_lim]},
         "marker": marker,
+        "window_sensitivity": window_sensitivity,
     }
 
     (cfg.DASHBOARD_DATA / "bundle.js").write_text(

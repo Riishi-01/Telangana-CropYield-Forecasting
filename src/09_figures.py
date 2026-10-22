@@ -200,7 +200,7 @@ def figure_f1(panel, summary, marker):
                         fontsize=7.5, color=cfg.C_MARKER_2026,
                     )
 
-            unit = d["unit"].iloc[0]
+            unit = d["yield_unit"].iloc[0]
             ax.set_ylabel(f"yield ({unit})")
             if c == 0:
                 ax.set_title(f"{crop_label(crop)}\n{title}", loc="left", fontsize=9.5)

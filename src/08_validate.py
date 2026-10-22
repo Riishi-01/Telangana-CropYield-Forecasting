@@ -152,7 +152,7 @@ def main() -> None:
         )
 
         results[crop] = {
-            "unit": str(d["unit"].iloc[0]),
+            "unit": str(d["yield_unit"].iloc[0]),
             "train_seasons": train_seasons,
             "test_seasons": sorted(test["season"].unique()),
             "n_train_rows": int(len(train)),

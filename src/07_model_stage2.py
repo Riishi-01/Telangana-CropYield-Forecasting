@@ -159,7 +159,7 @@ def main() -> None:
             "rain_sq_mean": float((d["rain_mm"] ** 2).mean()),
             "rain_min_mm": float(d["rain_mm"].min()),
             "rain_max_mm": float(d["rain_mm"].max()),
-            "unit": str(d["unit"].iloc[0]),
+            "unit": str(d["yield_unit"].iloc[0]),
         }
 
         if d_adj_r2 > 0.005 and f_p < 0.05:

@@ -145,7 +145,7 @@ def fit_quadratic(data: pd.DataFrame, spec: str) -> dict:
         "rain_p75_mm": r75,
         "slope_deficit_limb": slope_deficit,
         "slope_excess_limb": slope_excess,
-        "unit": str(data["unit"].iloc[0]),
+        "unit": str(data["yield_unit"].iloc[0]),
     }
 
 
