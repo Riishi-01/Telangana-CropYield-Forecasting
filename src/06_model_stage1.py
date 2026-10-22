@@ -2,7 +2,7 @@
 
 Specification (SRS §5.4):
 
-    yield ~ rain_mm + I(rain_mm**2) + C(district_id) + C(season)
+    yield ~ rain_mm + I(rain_mm**2) + C(district_id) + C(year)
 
 Estimator: OLS (statsmodels).  Vertex (optimum rainfall):
 
@@ -13,7 +13,7 @@ that condition fails the relationship is monotonic or flat; that is reported
 as a result and is never reframed as a vertex (GUIDE §7.2).
 
 Robustness (GUIDE §7.3, §7.4): every crop is refitted
-  (a) without season fixed effects, and
+  (a) without the year fixed effects, and
   (b) on the extended panel (era-tagged district ids, 2014-15 .. 2022-23).
 All specifications are reported, including the ones that look worse.
 
@@ -41,11 +41,11 @@ VERSION = cfg.data_version()
 # recorded in the manifest and PYTHONHASHSEED is pinned by the runner.
 RANDOM_STATE = cfg.RANDOM_STATE
 
-SPEC_PRIMARY = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(season)"
-SPEC_NO_SEASON_FE = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id)"
-SPEC_LINEAR = "y ~ rain_mm + C(district_id) + C(season)"
+SPEC_PRIMARY = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(year)"
+SPEC_NO_YEAR_FE = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id)"
+SPEC_LINEAR = "y ~ rain_mm + C(district_id) + C(year)"
 SPEC_STAGE2 = (
-    "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(season) "
+    "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(year) "
     "+ dry_run_max + dry_days_ge5 + heat_days + vpd_mean + rain_days"
 )
 
@@ -109,10 +109,23 @@ def fit_quadratic(data: pd.DataFrame, spec: str) -> dict:
     frac_below = None
     within = None
     monotonic_over_data = None
+    frac_below = None
+    n_above_vertex = None
+    n_distinct_ds_above = None
     if has_vertex and vertex is not None:
         within = bool(rmin <= vertex <= rmax)
         frac_below = float((data["rain_mm"] < vertex).mean())
         monotonic_over_data = bool(slope_excess > 0 and slope_deficit > 0)
+        # Tail support: how much data actually sits beyond the vertex?  A
+        # vertex is only as well determined as the observations that constrain
+        # the excess limb, so this count is reported alongside it.  It is
+        # counted on district-seasons (a district-season is one observation
+        # of the rainfall field) and on the full panel rows.
+        above = data["rain_mm"] > vertex
+        n_above_vertex = int(above.sum())
+        n_distinct_ds_above = int(
+            data.loc[above, ["district_id", "season"]].drop_duplicates().shape[0]
+        )
 
     return {
         "formula": spec.replace("y ~", "yield ~", 1),
@@ -135,6 +148,15 @@ def fit_quadratic(data: pd.DataFrame, spec: str) -> dict:
         "vertex_reason": reason,
         "vertex_within_observed_range": within,
         "vertex_frac_obs_below": frac_below,
+        "vertex_n_rows_above": n_above_vertex,
+        "vertex_n_district_seasons_above": n_distinct_ds_above,
+        "vertex_tail_support_note": (
+            f"{n_distinct_ds_above} of "
+            f"{int(data[['district_id', 'season']].drop_duplicates().shape[0])} "
+            "district-seasons carry rainfall above the vertex, so the excess "
+            "limb is estimated from a thin tail of the observed distribution."
+            if has_vertex and vertex is not None else None
+        ),
         "curve_rising_over_most_of_range": monotonic_over_data,
         "mean_fitted": float(np.mean(model.fittedvalues)),
         "rain_mean_mm": float(data["rain_mm"].mean()),
@@ -168,7 +190,7 @@ def main() -> None:
 
         res = {
             "primary": fit_quadratic(d_prim, SPEC_PRIMARY),
-            "no_season_fe": fit_quadratic(d_prim, SPEC_NO_SEASON_FE),
+            "no_year_fe": fit_quadratic(d_prim, SPEC_NO_YEAR_FE),
             "linear_only": fit_quadratic(d_prim, SPEC_LINEAR),
             "extended_panel": fit_quadratic(d_ext, SPEC_PRIMARY),
         }
@@ -189,7 +211,7 @@ def main() -> None:
             )
         else:
             log(f"    NO VERTEX REPORTED: {p['vertex_reason']}")
-        ny = res["no_season_fe"]
+        ny = res["no_year_fe"]
         ex = res["extended_panel"]
         lin = res["linear_only"]
         log(
@@ -198,7 +220,7 @@ def main() -> None:
             f"{'positive and significant' if lin['b1'] > 0 and lin['p1'] < 0.05 else 'not significant at p<0.05'})"
         )
         log(
-            f"    robustness: no season FE -> vertex "
+            f"    robustness: no year FE -> vertex "
             f"{ny['vertex_mm'] if ny['vertex_reported'] else 'n/a'}"
             f" | extended panel -> vertex "
             f"{ex['vertex_mm'] if ex['vertex_reported'] else 'n/a'}"
@@ -210,24 +232,53 @@ def main() -> None:
                 f"curve still rising over most of the range: "
                 f"{p['curve_rising_over_most_of_range']}"
             )
+            log(
+                f"    tail support: {p['vertex_n_district_seasons_above']} of "
+                f"{p['n_district_seasons']} district-seasons carry rainfall above "
+                f"the vertex (observed rainfall range {p['rain_min_mm']:.0f}-"
+                f"{p['rain_max_mm']:.0f} mm)"
+            )
 
     out = cfg.PROCESSED / "model_summary.json"
+    fitted_seasons = sorted(primary["season"].unique())
+    fitted_years = sorted(int(y) for y in primary["year"].unique())
     payload = {
         "created_utc": cfg.utc_now_iso(),
         "data_version": VERSION,
         "stage": "stage1",
         "estimator": "OLS (statsmodels)",
         "spec_primary": SPEC_PRIMARY,
-        "spec_no_season_fe": SPEC_NO_SEASON_FE,
+        "spec_no_year_fe": SPEC_NO_YEAR_FE,
         "vertex_rule": "reported only when b2 < 0 and p(b2) < 0.05",
+        "fitted_range": {
+            "panel": "primary panel (post-2016 districts)",
+            "seasons": fitted_seasons,
+            "years": fitted_years,
+            "n_seasons": len(fitted_seasons),
+            "n_rows": int(len(primary)),
+            "n_districts": int(primary["district_id"].nunique()),
+        },
+        "dataset_range": {
+            "seasons": sorted(panel["season"].unique()),
+            "n_rows": int(len(panel)),
+            "note": (
+                "the dataset covers 2014-15 -> 2022-23; the models are fitted "
+                "on the primary panel and the earlier seasons appear only in "
+                "the extended-panel robustness specification"
+            ),
+        },
+        "year_mapping": cfg.YEAR_MAPPING,
+        "year_mapping_source": cfg.YEAR_MAPPING_SOURCE,
         "crops": results,
     }
     cfg.write_json(out, payload)
     log(f"  wrote {out}")
+    log(f"  fitted range: {fitted_seasons[0]} -> {fitted_seasons[-1]} "
+        f"({len(fitted_seasons)} seasons, {len(primary)} rows)")
 
     # --- gate G7.3: both specifications present for every crop --------------
     for crop, res in results.items():
-        assert "primary" in res and "no_season_fe" in res and "extended_panel" in res, (
+        assert "primary" in res and "no_year_fe" in res and "extended_panel" in res, (
             f"{crop}: missing a robustness specification"
         )
     log("  gate G7.3: both FE specifications reported for every crop")

@@ -47,7 +47,7 @@ def main() -> None:
 
     # -- join yields to season features ---------------------------------------
     panel = clean.merge(
-        feat.drop(columns=["season_year"], errors="ignore"),
+        feat.drop(columns=["year"], errors="ignore"),
         on=["district_slug", "season"], how="left", validate="many_to_one",
     )
     assert panel["rain_mm"].notna().all(), "a yield row has no weather features"
@@ -79,7 +79,7 @@ def main() -> None:
                               kind="mergesort").reset_index(drop=True)
     cols = [
         "district_id", "district_slug", "district_label", "era", "season",
-        "season_year", "is_primary_panel", "crop", "area_ha", "area_unit",
+        "year", "is_primary_panel", "crop", "area_ha", "area_unit",
         "production", "production_unit", "yield", "yield_reported", "yield_unit",
         "base_yield", "yield_anom_pct", "lat", "lon",
         "rain_mm", "rain_days", "dry_run_max", "dry_days_ge5", "heat_days",
@@ -99,7 +99,7 @@ def main() -> None:
                     "heat_days", "vpd_mean", "tmax_mean"]
     wide = panel.pivot_table(
         index=["district_id", "district_slug", "district_label", "era", "season",
-               "season_year", "is_primary_panel", "lat", "lon"] + weather_cols,
+               "year", "is_primary_panel", "lat", "lon"] + weather_cols,
         columns="crop",
         values=["yield", "yield_anom_pct"],
         aggfunc="first",
@@ -124,6 +124,46 @@ def main() -> None:
     assert (cotton["yield_unit"] == "bales/ha").all(), "cotton must be bales/ha"
     assert not panel["yield"].isna().any()
     assert not panel["rain_mm"].isna().any()
+
+    # -- gate G1: agricultural-year <-> calendar-year mapping ---------------
+    # The spot-check row and the three-way alignment test.  A misaligned join
+    # manufactures a spurious null, so this must pass before anything else is
+    # interpreted.
+    print("\n  --- gate G1: agricultural-year <-> calendar-year mapping ---")
+    print(f"  mapping: {cfg.YEAR_MAPPING}")
+    print(f"  source : {cfg.YEAR_MAPPING_SOURCE}")
+
+    # spot-check row: Mahbubnagar 2015-16 rice against both candidate windows
+    spot = panel[(panel["district_slug"] == "mahbubnagar")
+                 & (panel["season"] == "2015-16")
+                 & (panel["crop"] == "Rice")]
+    if len(spot):
+        s = spot.iloc[0]
+        med = panel[(panel["district_slug"] == "mahbubnagar")
+                    & (panel["crop"] == "Rice")]["yield"].median()
+        fx = feat[feat["district_slug"] == "mahbubnagar"].set_index("year")
+        r_open = fx.loc[s["year"], "rain_mm"]
+        r_next = fx.loc[s["year"] + 1, "rain_mm"]
+        print(f"  spot check: Mahbubnagar 2015-16 Rice")
+        print(f"    recorded yield      {s['yield']:.3f} t/ha   (district median {med:.3f})")
+        print(f"    Jun-Sep {s['year']} rainfall  {r_open:7.1f} mm   <- season opens in this year")
+        print(f"    Jun-Sep {s['year'] + 1} rainfall  {r_next:7.1f} mm   <- the alternative reading")
+        print(f"    the poor yield matches the {'DRY' if r_open < r_next else 'WET'} window -> "
+              f"the opening year is the correct one")
+
+    ymap = cfg.verify_year_mapping(panel, feat)
+    print("  alignment test - within-district corr(yield anomaly, rainfall anomaly):")
+    for lag, res in ymap["alignments"].items():
+        detail = "  ".join(f"{c.split('(')[0][:8]}={v['r']:+.3f}" for c, v in res.items()
+                           if isinstance(v, dict) and "r" in v)
+        print(f"    {lag:7s} mean|r|={res['mean_abs_r']:.4f}   {detail}")
+    print(f"  verdict: {ymap['verdict']}")
+    assert ymap["best_lag"] == 0, (
+        "gate G1 FAILED: the implemented year alignment is not the best of the "
+        f"three (best is lag {ymap['best_lag']:+d}). The join is misaligned and "
+        "every downstream result is void until it is fixed."
+    )
+    log("    PASS: implemented alignment is the best of the three")
 
     print("\n  --- primary panel: rows per crop ---")
     for crop in cfg.TARGET_CROPS:
@@ -166,6 +206,15 @@ def main() -> None:
             "crops": cfg.TARGET_CROPS,
             "rows": int(len(panel)),
             "rows_primary_panel": int(len(prim)),
+            "year_mapping": cfg.YEAR_MAPPING,
+            "year_mapping_source": cfg.YEAR_MAPPING_SOURCE,
+            "fitted_range_note": (
+                "The MODELS are fitted on the primary panel "
+                f"({cfg.PRIMARY_PANEL_START} -> 2022-23, {len(prim)} rows). The "
+                f"dataset covers {cfg.EXTENDED_PANEL_START} -> 2022-23 "
+                f"({len(panel)} rows); the earlier seasons are used for "
+                "robustness only (extended-panel spec)."
+            ),
             "sha256": cfg.sha256_file(out),
             "seed": cfg.SEED,
             "pythonhashseed": "0",

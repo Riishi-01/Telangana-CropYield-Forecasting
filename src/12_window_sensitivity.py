@@ -35,7 +35,7 @@ log = cfg.log
 cfg.ensure_dirs()
 
 VERSION = cfg.data_version()
-SPEC = "y ~ rain_win + I(rain_win ** 2) + C(district_id) + C(season)"
+SPEC = "y ~ rain_win + I(rain_win ** 2) + C(district_id) + C(year)"
 
 WINDOWS = {
     "jul_sep": dict(label="Jul-Sep", months=(7, 9), days=92,
@@ -105,8 +105,8 @@ def main() -> None:
     daily = pd.read_parquet(cfg.INTERIM / "weather_daily.parquet")
     daily["date"] = pd.to_datetime(daily["date"])
     daily = daily[daily["date"] <= pd.Timestamp(cfg.INGEST_END)].copy()
-    daily["season_year"] = daily["date"].dt.year
-    daily["season"] = daily["season_year"].map(cfg.season_label)
+    daily["year"] = daily["date"].dt.year
+    daily["season"] = daily["year"].map(cfg.season_label)
     daily = daily[daily["date"].dt.month >= 6]
 
     # precompute the rainfall per window once

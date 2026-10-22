@@ -256,8 +256,8 @@ def main() -> None:
     # district-year rainfall totals for a quick sanity read
     w = weather[weather["date"] <= pd.Timestamp(C.INGEST_END)].copy()
     w["year"] = w["date"].dt.year
-    w["season_year"] = w["date"].dt.year.where(w["date"].dt.month >= 6, w["date"].dt.year - 1)
-    annual = w.groupby("season_year")["precip_mm"].sum()
+    w["year"] = w["date"].dt.year.where(w["date"].dt.month >= 6, w["date"].dt.year - 1)
+    annual = w.groupby("year")["precip_mm"].sum()
     log("  state-mean annual precipitation (mm), all districts:")
     for yr, val in annual.items():
         log(f"    {yr}: {val/len(coords):.0f}")

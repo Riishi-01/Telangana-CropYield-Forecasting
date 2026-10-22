@@ -109,13 +109,14 @@ Create `data/geo/districts.csv`:
 
 ```
 district_slug, district_label, era, first_year, last_year, lat, lon, source
-adilabad,        Adilabad,  pre2016,  2001-02, 2015-16, <lat>, <lon>, HQFILL
+adilabad,        Adilabad,  pre2016,  2014-15, 2015-16, <lat>, <lon>, HQFILL
 adilabad,        Adilabad,  post2016, 2016-17, 2022-23, <lat>, <lon>, CENTROID
 ```
 
-**Era rule (SRS §4.4):** `pre2016` covers 2001-02 … 2015-16. `post2016` covers
-2016-17 … 2022-23. Hyderabad 2000-01 is a special case — it has no post-2016 counterpart
-and is **excluded** from the primary panel entirely.
+**Era rule (SRS §4.4):** `pre2016` covers 2014-15 … 2015-16. `post2016` covers
+2016-17 … 2022-23. The delivered file starts at 2014-15 (ERRATA C1), so the
+pre-2016 block is two seasons, not the 2001-02 … 2013-14 block the original
+plan assumed. Hyderabad 2000-01 is not present in the delivered file at all.
 
 **Gate G2.2:** no `district_slug` appears under both eras as a single entity. Every row
 carries exactly one era tag.

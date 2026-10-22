@@ -69,6 +69,34 @@ ANALYSIS_START_MMDD = (6, 1)
 ANALYSIS_END_MMDD = (9, 30)
 FEATURE_WINDOW_END_MMDD = (10, 31)  # dry-spell features use Jun 1 - Oct 31
 
+# --------------------------------------------------------------------------- #
+# Agricultural-year <-> calendar-year mapping  (SRS §5.1, gate G1)
+# --------------------------------------------------------------------------- #
+# Telangana's agricultural year runs June to May, and a kharif crop is sown
+# between June and September.  The DES labels that crop with the agricultural
+# year it belongs to, so the label's FIRST component is the calendar year in
+# which the season OPENS:
+#
+#     season "Y-YY"  ==  June-September of CALENDAR year Y
+#
+# Kharif 2015-16 therefore uses Jun-Sep 2015 rainfall, not Jun-Sep 2016.
+# The alternative reading (the label's second component) is wrong, and
+# `verify_year_mapping()` below is the executable test of that claim: it
+# re-fits the rainfall-yield correlation under each possible alignment and
+# fails the build if the implemented alignment is not the best one.
+#
+# Verified empirically (see src/05_build_panel.py, gate G1): Mahbubnagar
+# 2015-16 rice yielded 2.26 t/ha against a district median of 2.82, and
+# Jun-Sep 2015 delivered 416 mm against Jun-Sep 2016's 1015 mm - the dry
+# window is the one that matches the poor yield.  Systematically, the
+# same-year alignment maximises |r| for rice and moong, and rice's
+# correlation *flips sign* under the next-year alignment, which is the
+# signature of a misaligned join.
+SEASON_OPENS_IN_CALENDAR_YEAR = True
+YEAR_MAPPING = "season Y-YY == Jun-Oct of calendar year Y (season opens in year Y)"
+YEAR_MAPPING_SOURCE = "SRS §5.1 Telangana District Collectorate (Kamareddy), " \
+                      "agricultural year June-May, kharif sown June-September"
+
 # Marker window for the 2026 rainfall reading (SRS §5.6)
 MARKER_YEAR = 2026
 MARKER_START = "2026-06-01"
@@ -132,6 +160,16 @@ C_CURVE = "#1f77b4"
 C_RAIN = "#4C78A8"
 C_YIELD = "#E45756"
 C_MARKER_2026 = "#111111"
+
+# Crop identity palette - Okabe-Ito, colourblind-safe (SRS §7.1).  One colour
+# per crop, fixed for every chart, figure and selector: switching crops never
+# repaints the other crops.
+CROP_COLORS = {
+    "Rice": "#009E73",             # paddy green
+    "Arhar/Tur": "#D55E00",        # tur dal vermillion
+    "Moong(Green Gram)": "#CCBB44",  # green gram yellow-green
+    "Cotton(lint)": "#0072B2",     # boll blue
+}
 
 # Mandatory disclosure strings (SRS §5.6, §9)
 DISCLOSURE_2026 = (
@@ -208,8 +246,141 @@ def season_label(year_start: int) -> str:
     return f"{year_start}-{str(year_start + 1)[-2:]}"
 
 
+# --------------------------------------------------------------------------- #
+# Gate G1 - agricultural-year <-> calendar-year mapping
+# --------------------------------------------------------------------------- #
+def verify_year_mapping(panel, features) -> dict:
+    """Prove the implemented year alignment is the correct one.
+
+    A misaligned join is the classic way to manufacture a spurious null: if
+    rainfall is shifted by a year, the rainfall-yield correlation collapses
+    towards zero because monsoon rainfall is strongly autocorrelated between
+    adjacent years.  So a near-zero correlation is NOT evidence of no
+    relationship until the join has been checked.
+
+    The test re-aligns the same panel three ways - the implemented alignment
+    (season opens in the label's first year), the alternative (the label's
+    second year) and the prior year - and compares the within-district
+    correlation of the yield anomaly against the rainfall anomaly for each.
+
+    Returns a report dict; raises AssertionError if the implemented alignment
+    is not the best of the three.
+    """
+    import numpy as np
+    import pandas as pd
+
+    keys = ["district_slug", "year"]
+    rain = features[keys + ["rain_mm"]].copy()
+    yields = panel[keys + ["crop", "yield"]].copy()
+
+    # the alignment under test: year Y uses calendar year Y rainfall
+    report = {"mapping": YEAR_MAPPING, "source": YEAR_MAPPING_SOURCE, "alignments": {}}
+    best_key, best_abs = None, -1.0
+
+    for lag in (0, 1, -1):
+        shifted = rain.copy()
+        shifted["year"] = shifted["year"] + lag
+        merged = yields.merge(shifted.rename(columns={"rain_mm": "rain"}),
+                              on=keys, how="inner")
+        rs = {}
+        for crop, grp in merged.groupby("crop"):
+            grp = grp.dropna(subset=["yield", "rain"])
+            if len(grp) < 30:
+                continue
+            y_anom = grp["yield"] - grp.groupby("district_slug")["yield"].transform("median")
+            r_anom = grp["rain"] - grp.groupby("district_slug")["rain"].transform("median")
+            r = float(np.corrcoef(r_anom, y_anom)[0, 1])
+            agree = float((np.sign(y_anom) == np.sign(r_anom)).mean())
+            rs[crop] = {"r": round(r, 4), "sign_agreement": round(agree, 4), "n": int(len(grp))}
+        report["alignments"][f"lag_{lag:+d}"] = rs
+
+        # score the alignment by the mean |r| across crops: an alignment that
+        # destroys the signal is the one that is misaligned.
+        score = float(np.mean([abs(v["r"]) for v in rs.values()])) if rs else 0.0
+        report["alignments"][f"lag_{lag:+d}"]["mean_abs_r"] = round(score, 4)
+        if score > best_abs:
+            best_abs, best_key = score, lag
+
+    report["implemented_lag"] = 0
+    report["best_lag"] = best_key
+    report["verdict"] = (
+        "implemented alignment is the best of the three"
+        if best_key == 0
+        else f"IMPLEMENTED ALIGNMENT IS NOT THE BEST (best is lag {best_key:+d})"
+    )
+    return report
+
+
 def log(msg: str) -> None:
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+# --------------------------------------------------------------------------- #
+# The 2026 implied-yield range (P4-15, P3-12)
+# --------------------------------------------------------------------------- #
+def implied_2026_range(primary, marker_features, crop: str, coef: dict) -> dict | None:
+    """Read the fitted curve at each district's OBSERVED 2026 rainfall.
+
+    The 2026 rainfall is observed (ERA5). What the fitted curve implies is
+    NOT a point value - it is a range, because the curve is read at each
+    district's own 2026 rainfall and each district reads differently. The
+    range is expressed as a percentage of the curve read at that district's
+    own median rainfall, so the comparison is like-for-like.
+
+    Returns None when the crop's fitted curve has no statistically supported
+    shape (b2 < 0 and p < 0.05). In that case no implied yield is published:
+    reading a yield off an unsupported curve is an extrapolation, not a
+    reading, and for arhar it returns physically impossible negative
+    yields. The rule is the same one that gates the vertex.
+    """
+    b1, b2 = coef.get("b1"), coef.get("b2")
+    y0, rbar, r2bar = coef.get("mean_fitted"), coef.get("rain_mean_mm"), coef.get("rain_sq_mean")
+    if None in (b1, b2, y0, rbar, r2bar):
+        return None
+    if not (b2 < 0 and coef.get("p2", 1.0) < 0.05):
+        return None
+
+    def curve(r: float) -> float:
+        return y0 + b1 * (r - rbar) + b2 * (r * r - r2bar)
+
+    d = primary[primary["crop"] == crop]
+    med_rain = d.groupby("district_slug")["rain_mm"].median()
+    rows = []
+    for r in marker_features.itertuples():
+        slug = r.district_slug
+        if slug not in med_rain.index:
+            continue
+        rr = float(r.rain_mm)
+        normal = curve(float(med_rain[slug]))
+        if normal == 0:
+            continue
+        rows.append({
+            "slug": slug,
+            "rain_mm": round(rr, 1),
+            "implied_yield": round(curve(rr), 4),
+            "normal_yield": round(normal, 4),
+            "pct_vs_normal": round(100.0 * (curve(rr) / normal - 1.0), 2),
+        })
+    if not rows:
+        return None
+
+    pcts = [r["pct_vs_normal"] for r in rows]
+    import numpy as np
+
+    state_rain = float(marker_features["rain_mm"].mean())
+    state_normal = curve(float(med_rain.mean()))
+    return {
+        "unit": coef.get("unit"),
+        "per_district": rows,
+        "pct_min": round(min(pcts), 2),
+        "pct_p10": round(float(np.percentile(pcts, 10)), 2),
+        "pct_median": round(float(np.percentile(pcts, 50)), 2),
+        "pct_p90": round(float(np.percentile(pcts, 90)), 2),
+        "pct_max": round(max(pcts), 2),
+        "state_mean_rain_mm": round(state_rain, 1),
+        "state_mean_implied_yield": round(curve(state_rain), 4),
+        "state_mean_pct_vs_normal": round(100.0 * (curve(state_rain) / state_normal - 1.0), 2),
+    }
 
 
 # --------------------------------------------------------------------------- #

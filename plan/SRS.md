@@ -170,7 +170,7 @@ gazetteer lookup, and makes no continuity assumption. **This is the Tier 1 defau
 ### 4.4 District ID convention
 
 ```
-{slug}__pre2016    e.g.  adilabad__pre2016      (2001-02 … 2015-16)
+{slug}__pre2016    e.g.  adilabad__pre2016      (2014-15 … 2015-16)
 {slug}__post2016   e.g.  adilabad__post2016     (2016-17 … 2022-23)
 ```
 
@@ -185,7 +185,7 @@ data rather than silently mixing incompatible geographic units.
 | Panel | Definition | Use |
 |---|---|---|
 | **Primary** | 2016-17 → 2022-23, post-2016 districts only | All reported results |
-| **Extended** | 2001-02 → 2022-23, both eras, era-tagged | Robustness check only |
+| **Extended** | 2014-15 → 2022-23, both eras, era-tagged | Robustness check only |
 
 **AMENDED (ERRATA C1):** the extended panel is **2014-15 → 2022-23** — the earliest
 seasons the delivered file contains. Its pre-2016 block is 2014-15 and 2015-16 only
@@ -234,11 +234,13 @@ invalid. Cross-crop comparability is worth more than marginal per-crop accuracy 
 | Moong (Green Gram) | t/ha | **Primary** | Rainfed pulse |
 | Rice (kharif) | t/ha | **Secondary** | Telangana Dept. of Agriculture lists paddy under "assured irrigation sources" |
 
-**AMENDED (ERRATA C3):** the delivered file carries **36 kharif crop groups** (all
-labelled Kharif; no Rabi groups). **Two are reported in bales**, not tonnes:
-`Cotton(lint)` and `Mesta`. The remaining groups are carried in the panel and the
-dashboard as map-and-describe layers with no fitted model, and are labelled as such in
-the interface.
+**AMENDED (ERRATA C3, amended v1.1.0):** the delivered file carries **36 kharif crop groups**
+(all labelled Kharif; no Rabi groups). **Two are reported in bales**, not tonnes:
+`Cotton(lint)` and `Mesta`. **The project scope was narrowed by the owner to four
+crops** (Cotton lint, Arhar/Tur, Moong, Rice); the remaining 32 groups are removed
+during ingest as unnecessary columns and rows and are **not** carried in the panel or
+the dashboard. The dropped groups and the reasons are listed in
+`data/processed/crops_kharif_clean.metadata.json`.
 
 **⚠ Unit hazard — mandatory.** Cotton is reported in **bales**, not tonnes. Its column is
 `Cotton(lint)__Kharif__Yield (Bales/Hectare)`, **not** `Yield (Tonne/Hectare)`. Any
@@ -297,9 +299,9 @@ fitted curve, with implied yield read off the curve.
 - Any language implying 2026 yield was forecast, estimated, or modelled
 
 **Required labelling wherever 2026 appears:**
-> "Response curve fitted on 2001-02 – 2022-23 observed yields. 2026 rainfall is ERA5
-> observed. Any implied yield is a reading of the fitted curve, not a validated forecast —
-> the extrapolation gap is 3+ years."
+> "Response curve fitted on 2016-17 – 2022-23 observed yields (the primary panel).
+> 2026 rainfall is ERA5 observed. Any implied yield is a reading of the fitted curve, not a
+> validated forecast — the extrapolation gap is 4+ years."
 
 ---
 
@@ -372,13 +374,31 @@ this audience includes statisticians who will check.
 | Semantic | Colormap | Type | Rationale |
 |---|---|---|---|
 | **Rainfall deficit / drought severity** | `YlOrRd` | Sequential | Standard climate-drought convention. Light = wet, dark red = severe deficit. |
-| **Yield anomaly (%)** | `RdYlBu` | Diverging | Blue = below normal, cream = normal, red = above normal. Perceptually uniform, colourblind-safe. Zero must map to the neutral midpoint. **AMENDED (ERRATA C7): matplotlib's `RdYlBu` runs red→blue as the value rises, so the ramp is used reversed (`RdYlBu_r`) to deliver the semantics this table fixes. The colormap itself is unchanged, and the legend names the direction explicitly.** |
+| **Yield anomaly (%)** | `RdYlBu` | Diverging | Blue = below normal, cream = normal, red = above normal. Perceptually uniform, colourblind-safe. Zero must map to the neutral midpoint. **AMENDED (ERRATA C7):** matplotlib's `RdYlBu` runs red→blue as the value rises, so the ramp is used reversed (`RdYlBu_r`) to deliver the semantics this table fixes. The colormap itself is unchanged, and the legend names the direction explicitly.** |
+| **Crop identity** | Okabe-Ito (fixed) | Fixed | One colour per crop, **identical in every chart, figure and selector**. A crop's colour never changes when the user switches views. |
 | **Response-curve scatter/line** | `#1f77b4` + `#d62728` | Fixed | Matplotlib tab colours; maximum contrast on white |
 | **Rainfall bars** | `#4C78A8` | Fixed | — |
 | **Yield lines** | `#E45756` | Fixed | — |
 | **2026 marker** | `#111111` dashed | Fixed | Maximum salience, unambiguous against all series |
 
+**Crop identity palette (Okabe-Ito, colourblind-safe):**
+
+| Crop | Hex | Basis |
+|---|---|---|
+| Rice | `#009E73` | paddy green |
+| Arhar/Tur | `#D55E00` | tur dal vermillion |
+| Moong | `#CCBB44` | green gram yellow-green |
+| Cotton | `#0072B2` | boll blue |
+
 **Rules:**
+- A crop's colour is **fixed**: the same crop carries the same hex in the
+  response curves, the time series, the table and the selector chips. Switching
+  crops must never repaint the other crops.
+- Red/green pairings are prohibited **between two data series**. Okabe-Ito's
+  green (`#009E73`) and vermillion (`#D55E00`) are distinguishable under
+  deuteranopia and protanopia, which is the property that matters; the two are
+  never the only thing distinguishing two adjacent series, and every series
+  also carries a label.
 - Sequential ramps → monotonically increasing perceived lightness. Never a rainbow/jet map.
 - Diverging ramps → **zero always maps to the exact midpoint colour**, never to ramp index 0.
 - Domain **must** be fixed per metric. Do **not** auto-rescale between views.

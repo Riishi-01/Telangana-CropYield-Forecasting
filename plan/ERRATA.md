@@ -199,6 +199,65 @@ the observed minimum.
 
 ---
 
+## C9 — the hardening pass: the year mapping is verified, the fixed effect is renamed, and the result is a split
+
+Implements `plan/IMPROVEMENT_PLAN.md`. Four substantive changes, plus the
+correction of two factual errors in that plan (recorded in its §0 V-0).
+
+**C9.1 — the agricultural-year mapping is verified in code, not assumed.**
+`common.YEAR_MAPPING` names the convention ("season Y-YY == Jun-Oct of calendar
+year Y") and `common.verify_year_mapping()` is an **executable gate** that
+re-fits the rainfall–yield relationship under three alignments and fails the
+build if the implemented one is not the best. It passes: mean |r| is 0.137
+(same year) against 0.107 (+1 yr) and 0.037 (−1 yr), and **rice's correlation
+flips sign** under the +1-yr shift. The Mahbubnagar 2015-16 spot-check row is
+printed at build time. This closes the plan's highest-priority item: the
+mapping is correct, so the result set is not void.
+
+**C9.2 — the year fixed effect is renamed.** The term was `C(season)`, which
+invites a reviewer to believe kharif-vs-rabi variation was controlled for. Only
+kharif is modelled, so the term is a **year** effect. The panel column
+`season_year` is renamed `year`; the model term is `C(year)`; the specification
+key `no_season_fe` becomes `no_year_fe`; and the prose now says "year fixed
+effects" everywhere. The design matrix is **numerically identical** before and
+after (verified), and the fitted coefficients are unchanged to the last
+reported digit. Per SRS §6.2 a column rename is a MAJOR schema change, but the
+panel's *content* is unchanged, so DATA_VERSION stays at 1.1.0 and the change
+is recorded here instead.
+
+**C9.3 — the result is a split, not a blanket null, and is now reported that
+way.** The plan's §0 was written on the assumption that no crop showed a
+rainfall–yield relationship. The rice relationship is real: within-district
+r = +0.221 (p = 0.001), the quadratic term p = 0.018, and it survives the
+robustness grid. The README's headline has been rewritten accordingly.
+
+**C9.4 — the 2026 implied yield is published only where it is defensible, and
+only as a band.** Two gates were added. (a) The implied range is published only
+for a crop whose curve has a statistically supported shape — the same rule that
+gates the vertex. For arhar, whose quadratic term is not significant, the
+reading returned **negative yields for 6 of 32 districts**, which is
+physically impossible; that number is now withheld and the dashboard says why.
+(b) What *is* published is a **band** (the range of readings across the 32
+districts), never a single dashed assertion. For rice the band is −12.7 % to
+−4.9 % of each district's own normal, with the state-mean reading (−9.9 %)
+inside it.
+
+**Corrections to the improvement plan itself, recorded in its §0 V-0:**
+P1-10 asserted that 2001-02 → 2013-14 data exists in the delivered file — it
+does not, and P1-10 is dropped as untestable. P1-7 asserted that kharif rainfall
+"essentially never exceeds ~900 mm" — the observed range is 363–1,827 mm, and
+11 of 220 district-seasons exceed the rice vertex, so the vertex is thin-tailed
+rather than extrapolative. Both are corrected in the plan.
+
+**Also implemented:** the robustness grid (P1-6, `src/13_robustness_grid.py`,
+7 rows with a verdict line), the mixed-effects slope heterogeneity test (P1-9,
+`src/14_slope_heterogeneity.py`, LRT p-values for all four crops), the Okabe-Ito
+crop identity palette (P4-16, SRS §7.1), the 2026 band rendering (P4-15), the
+boundary-discontinuity note on the map itself (P4-17), and the irrigation
+absence stated as the primary limitation (P2-11, the A23 path).
+
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -216,6 +275,13 @@ the observed minimum.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 20 headless checks |
-| G12 all 12 disclosures present | **PASS** — in README §6 and in the dashboard footer |
+| G11 dashboard QA | **PASS** — 34 headless checks |
+| G12 all 12 disclosures present | **PASS** — in README §7 and in the dashboard footer |
+| **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
+| **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
+| **G3 fitted range stated (P0-3)** | **PASS** — `model_summary.json` and `fetch_manifest.json` both record it |
+| **G4 partition verdict per district (P0-4)** | **PASS** — 32 post-2016 districts listed in `PARTITION_NOTE.md` |
+| **G6 robustness grid (P1-6)** | **PASS** — 6 cells run, row 7 deferred, verdict line in README §5 |
+| **G9 heterogeneity LRT (P1-9)** | **PASS** — p reported for all 4 crops; shared slope not rejected |
+| **G11b 2026 implied range gated (P4-15)** | **PASS** — published for rice only; 3 crops withheld with a reason |
 | G13 local commits clean; no push | **PASS** — no remote configured |

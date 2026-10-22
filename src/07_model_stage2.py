@@ -41,9 +41,9 @@ VERSION = cfg.data_version()
 # recorded in the manifest and PYTHONHASHSEED is pinned by the runner.
 RANDOM_STATE = cfg.RANDOM_STATE
 
-SPEC_STAGE1 = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(season)"
+SPEC_STAGE1 = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(year)"
 SPEC_STAGE2 = (
-    "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(season) "
+    "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(year) "
     "+ dry_run_max + dry_days_ge5 + heat_days + vpd_mean + rain_days"
 )
 STAGE2_EXTRA = ["dry_run_max", "dry_days_ge5", "heat_days", "vpd_mean", "rain_days"]

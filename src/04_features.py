@@ -76,7 +76,7 @@ def days_in_long_runs(precip: np.ndarray, min_len: int = 5,
 def season_features(daily: pd.DataFrame) -> pd.DataFrame:
     """Compute the feature set for one district's daily series."""
     rows = []
-    for (slug, season_year), g in daily.groupby(["district_slug", "season_year"]):
+    for (slug, year), g in daily.groupby(["district_slug", "year"]):
         g = g.sort_values("date")
 
         # --- analysis window: 1 Jun - 30 Sep of the season year --------------
@@ -97,8 +97,8 @@ def season_features(daily: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "district_slug": slug,
-                "season_year": int(season_year),
-                "season": C.season_label(int(season_year)),
+                "year": int(year),
+                "season": C.season_label(int(year)),
                 "n_days_analysis": int(len(a)),
                 "n_days_dryspell": int(len(d)),
                 "rain_mm": round(float(np.nansum(precip_a)), 2),
@@ -125,12 +125,14 @@ def main() -> None:
     main_mask = weather["date"] <= pd.Timestamp(C.INGEST_END)
     analysis = weather[main_mask].copy()
     # A kharif season is identified by the calendar year in which it opens:
-    # June-October of year Y is season Y-YY.
-    analysis["season_year"] = analysis["date"].dt.year
+    # June-October of year Y is season Y-YY.  The mapping is a named
+    # constant (common.YEAR_MAPPING) and is verified by gate G1 in step 05.
+    assert C.SEASON_OPENS_IN_CALENDAR_YEAR, "year mapping constant flipped"
+    analysis["year"] = analysis["date"].dt.year
     analysis = analysis[analysis["date"].dt.month >= 6]
 
     features = season_features(analysis)
-    features = features.sort_values(["district_slug", "season_year"]).reset_index(drop=True)
+    features = features.sort_values(["district_slug", "year"]).reset_index(drop=True)
     out = C.INTERIM / "features.parquet"
     features.to_parquet(out, index=False)
     log(f"  wrote {out} rows={len(features)}")
@@ -162,7 +164,7 @@ def main() -> None:
     marker_mask = weather["date"] >= pd.Timestamp(C.MARKER_START)
     if marker_mask.any():
         m = weather[marker_mask].copy()
-        m["season_year"] = m["date"].dt.year
+        m["year"] = m["date"].dt.year
         m = m[m["date"].dt.month >= 6]
         f2026 = season_features(m)
         f2026 = f2026.sort_values("district_slug").reset_index(drop=True)

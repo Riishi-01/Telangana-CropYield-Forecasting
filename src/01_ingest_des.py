@@ -130,7 +130,7 @@ def main() -> None:
     full["season"] = full["season_raw"].map(
         lambda s: cfg.season_label(cfg.season_to_year_start(str(s)))
     )
-    full["season_year"] = full["season"].map(cfg.season_to_year_start)
+    full["year"] = full["season"].map(cfg.season_to_year_start)
     full["district_slug"] = (
         full["district_raw"].astype("string").str.strip()
         .str.replace(r"^\d+\.\s*", "", regex=True).str.lower()
@@ -181,7 +181,7 @@ def main() -> None:
 
     # -- order, types, rounding ---------------------------------------------
     cols = [
-        "season", "season_year", "district", "district_slug", "era", "crop",
+        "season", "year", "district", "district_slug", "era", "crop",
         "area_ha", "area_unit", "production", "production_unit",
         "yield", "yield_reported", "yield_unit",
     ]
@@ -227,7 +227,7 @@ def main() -> None:
 
     # -- full-fidelity long table (all 36 crops, kept for provenance) --------
     keep_full = [
-        "district_raw", "district_slug", "district", "season", "season_year",
+        "district_raw", "district_slug", "district", "season", "year",
         "crop", "area_ha", "production", "yield_reported", "state", "era",
     ]
     full_out = full[keep_full].copy()
@@ -280,7 +280,7 @@ def main() -> None:
                 "out_of_scope_crop_groups": out_of_scope,
                 "out_of_scope_rows": int(n0 - len(full) - int(drop.sum())),
                 "quality_rule_rows": int(drop.sum()),
-                "columns_dropped": ["State", "Year (kept as season/season_year)",
+                "columns_dropped": ["State", "Year (kept as season/year)",
                                     "session (Kharif-only scope)"],
             },
             "quality_rules": {
