@@ -17,17 +17,35 @@
     <span>Kharif</span><span aria-hidden="true">·</span><span>Telangana</span><span aria-hidden="true">·</span><span>ERA5 reanalysis</span><span aria-hidden="true">·</span><span>DATA_VERSION <span id="dataVersion">—</span></span>
   </div>
 
-  <h1>Forecasting kharif yield<br>from rainfall</h1>
+  <h1>Forecasting kharif yield from rainfall and 2026 prediction</h1>
 
-  <p class="standfirst">
-    Telangana's thirty-two districts, kharif 2014-15 to 2022-23, four crops:
-    cotton, arhar, moong and rice. Yields come from the Directorate of
-    Economics &amp; Statistics; daily rainfall comes from ERA5 reanalysis via
-    the Open-Meteo archive API. The 2026 figures are model predictions from
-    each crop's own selected model — and every one of them carries its
-    out-of-sample skill score, because a prediction without one is not worth
-    reading.
-  </p>
+  <dl class="standfirst">
+    <div>
+      <dt>Place</dt>
+      <dd>Telangana — 32 districts</dd>
+    </div>
+    <div>
+      <dt>Period</dt>
+      <dd>Kharif 2014-15 → 2022-23, plus the observed 2026 kharif rainfall</dd>
+    </div>
+    <div>
+      <dt>Crops</dt>
+      <dd>Cotton (lint), arhar/tur, moong (green gram), rice</dd>
+    </div>
+    <div>
+      <dt>Data source</dt>
+      <dd>DES yields; ERA5 reanalysis rainfall through the Open-Meteo archive API</dd>
+    </div>
+    <div>
+      <dt>Predictive model</dt>
+      <dd>Statistical, not machine learning — ordinary least squares with district and
+        year fixed effects. One specification per crop, chosen by leave-one-season-out
+        cross-validation inside the fitting period.</dd>
+    </div>
+  </dl>
+
+  <p class="standfirst__note">The 2026 figures are predictions from each crop's own
+    model, and every one of them carries that model's out-of-sample skill score.</p>
 
   <div class="controls" role="group" aria-label="Analysis controls">
     <div class="control">
@@ -95,7 +113,7 @@
     </div>
 
     <div class="readout readout--model" id="modelReadout">
-      <h3 class="readout__title">
+      <h3 class="readout__title" id="modelReadoutTitle">
         <span class="icon icon--model" aria-hidden="true"></span>Model readout
       </h3>
       <dl id="modelFacts" class="facts"></dl>
@@ -105,7 +123,7 @@
   <!-- ── forecast ──────────────────────────────────────────────────────── -->
   <section class="region region--forecast" aria-labelledby="forecastHead">
     <div class="section-head">
-      <h2 id="forecastHead">Yield by year, and the 2026 forecast</h2>
+      <h2 id="forecastHead">Yield per year, and the 2026 prediction</h2>
       <p class="section-note">Each crop is forecast by its own model — the one that
         survived cross-validation inside the fitting period and produced valid yields at
         2026's rainfall. Every crop is indexed to its own Telangana average
@@ -135,21 +153,6 @@
     </div>
   </section>
 
-  <!-- ── window sensitivity ────────────────────────────────────────────── -->
-  <section class="region region--window" aria-labelledby="windowHead">
-    <div class="section-head">
-      <h2 id="windowHead">Does the rainfall optimum depend on the season window?</h2>
-      <p class="section-note">Jun–Sep is the sowing window, not the growing season. The same model is refitted on Jul–Sep and Jun–Oct rainfall to test whether the conclusion survives a different window.</p>
-    </div>
-    <div class="table-wrap">
-      <table id="windowTable" class="window-table">
-        <thead><tr id="windowHeadRow"></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="chart-foot" id="windowFoot">—</p>
-  </section>
-
   <!-- ── 2026 forecast table ───────────────────────────────────────────── -->
   <section class="region region--forecasttable" aria-labelledby="forecastTableHead">
     <div class="section-head">
@@ -176,17 +179,6 @@
       <p class="state-summary__note" id="stateSummaryNote">—</p>
     </div>
 
-  </section>
-
-  <!-- ── model comparison ────────────────────────────────────────────── -->
-  <section class="region region--stats" aria-labelledby="statsHead">
-    <div class="section-head">
-      <h2 id="statsHead">Does the weather model earn its place?</h2>
-      <p class="section-note">Stage 2 adds dry-spell, heat and VPD features to the rainfall quadratic. The test period is the three seasons after the training block.</p>
-    </div>
-    <div id="statsChart" class="chart chart--md" role="img"
-         aria-label="Bar chart comparing the change in R squared between Stage 1 and Stage 2, and the out-of-sample skill score against the median baseline, for each crop."></div>
-    <p class="chart-foot" id="statsFoot">—</p>
   </section>
 </main>
 

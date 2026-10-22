@@ -203,6 +203,10 @@ def main() -> None:
     forecast: dict = {}
     forecast_meta: dict = {}
     forecast_path = cfg.PROCESSED / "forecast_series.json"
+    # the model-selection record, so the page can explain the model that
+    # produced each prediction instead of only quoting its output
+    fm_path = cfg.PROCESSED / "forecast_models.json"
+    fm = cfg.read_json(fm_path) if fm_path.exists() else {}
     if forecast_path.exists():
         fs = cfg.read_json(forecast_path)
         forecast_meta = {
@@ -210,8 +214,12 @@ def main() -> None:
             "area_baseline_note": fs["area_baseline_note"],
             "measure": fs["measure"],
             "aggregation": fs["aggregation"],
+            "selection_method": fm.get("selection_method", ""),
+            "validity_gate": fm.get("validity_gate", ""),
+            "baseline": fm.get("crops", {}).get("Rice", {}).get("baseline", ""),
         }
         for crop, res in fs["crops"].items():
+            fc = (fm.get("crops") or {}).get(crop, {})
             forecast[crop] = {
                 "unit": res["unit"],
                 "selected_spec": res["selected_spec"],
@@ -225,6 +233,12 @@ def main() -> None:
                 "state": res["state"],
                 "n_districts": res["n_districts"],
                 "n_negative_predicted": res["n_negative_predicted"],
+                # the fit behind the prediction
+                "train_seasons": fc.get("train_seasons", []),
+                "test_seasons": fc.get("test_seasons", []),
+                "n_train_rows": fc.get("n_train_rows"),
+                "n_test_rows": fc.get("n_test_rows"),
+                "cv_ranking": fc.get("cv_ranking", []),
             }
 
     # -- models ---------------------------------------------------------------
@@ -413,30 +427,11 @@ def main() -> None:
         },
     }
 
-    # -- window sensitivity (optional; present once step 12 has run) ----------
-    window_sensitivity = {"available": False}
-    ws_path = cfg.PROCESSED / "window_sensitivity.json"
-    if ws_path.exists():
-        ws = cfg.read_json(ws_path)
-        window_sensitivity = {
-            "available": True,
-            "windows": {k: v["label"] for k, v in ws["windows"].items()},
-            "window_order": ["jul_sep", "jun_sep", "jun_oct"],
-            "crops": {
-                crop: {
-                    w: {
-                        "p2": r["p2"],
-                        "r2": r["r2"],
-                        "vertex_reported": r["vertex_reported"],
-                        "vertex_mm": r["vertex_mm"],
-                        "n": r["n"],
-                    }
-                    for w, r in ws["crops"][crop].items()
-                }
-                for crop in crops
-                if crop in ws["crops"]
-            },
-        }
+    # -- window sensitivity: NOT shipped ---------------------------------------
+    # The window-sensitivity panel was retired from the page (ERRATA C14).  The
+    # analysis itself is unchanged and stays in the README (section 5) and in
+    # figures/f5_window_sensitivity.png; only the dashboard payload is dropped,
+    # so the bundle carries nothing the page cannot use.
 
     # -- the 2026 map layer: its own fixed domains ---------------------------
     # The observed map uses one fixed domain per crop, so the scale never
@@ -530,7 +525,6 @@ def main() -> None:
         "domains_2026": domains_2026,
         "marker": marker,
         "rain_state": rain_state,
-        "window_sensitivity": window_sensitivity,
     }
 
     (cfg.DASHBOARD_DATA / "bundle.js").write_text(

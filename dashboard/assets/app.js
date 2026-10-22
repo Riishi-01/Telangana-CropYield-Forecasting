@@ -115,8 +115,7 @@
     rainTitle: document.getElementById("rainTitle"),
     yieldTitle: document.getElementById("yieldTitle"),
     modelFacts: document.getElementById("modelFacts"),
-    stats: document.getElementById("statsChart"),
-    statsFoot: document.getElementById("statsFoot"),
+    modelReadoutTitle: document.getElementById("modelReadoutTitle"),
     forecastChart: document.getElementById("forecastChart"),
     forecastTicks: document.getElementById("forecastTicks"),
     forecastLegend: document.getElementById("forecastLegend"),
@@ -134,6 +133,37 @@
     displaylogo: false,
     responsive: true,
     modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "toggleSpikelines"]
+  };
+
+  /* ONE hover label style for every chart, and it lives in the LAYOUT, not
+   * in the config: Plotly reads hoverlabel from the layout, and a hoverlabel
+   * in the config is silently ignored.
+   *
+   * Two things are being fixed here.
+   *
+   * 1. THE COLOUR.  Plotly's default takes the label background from the
+   *    trace colour and picks the text colour by its own contrast rule.  On
+   *    a pale series that produces a box nothing else on the page looks
+   *    like, and the text colour is not the page's.
+   *
+   * 2. THE INVISIBLE TEXT.  Plotly sizes the label's box from the text it
+   *    measures, and the text it renders is not always the text it
+   *    measured: the box was being cut for a narrower fallback face while
+   *    the line was drawn in the page's own typeface, so the tail of the
+   *    text spilled out of the box.  On the old blue label that spill was
+   *    WHITE on the cream page - so the reader saw a box with the text
+   *    stopping in the middle of a word.  Naming the face in the layout
+   *    makes the measurement and the drawing agree, and a cream box with
+   *    ink text means that even a spill stays legible.
+   */
+  var HOVER_LABEL = {
+    bgcolor: "#fffdf9",
+    bordercolor: "#b3ab9b",
+    font: {
+      family: "IBM Plex Sans, sans-serif",
+      size: 11,
+      color: "#16181d"
+    }
   };
 
   /* ---------------------------------------------------------------------- *
@@ -691,6 +721,7 @@
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       font: { family: "IBM Plex Sans, sans-serif", size: 11, color: "#454b55" },
+      hoverlabel: HOVER_LABEL,
       showlegend: false,
       hovermode: "x unified",
       xaxis: {
@@ -726,6 +757,13 @@
       els.modelFacts.innerHTML = out;
       return;
     }
+    // On the 2026 layer the numbers on screen come from THAT crop's own
+    // forecasting model, so the readout describes that model.  On an observed
+    // season it describes the shared Stage-1 fit, as before.
+    if (isForecastSeason() && forecastFor(state.crop)) {
+      els.modelFacts.innerHTML = forecastFacts(state.crop);
+      return;
+    }
     var s1 = m.stage1;
     var s2 = m.stage2 || {};
     var va = m.validation || {};
@@ -749,6 +787,37 @@
       out += fact("Skill vs median", fmt(va.skill_rmse, 3), va.skill_rmse <= 0);
     }
     els.modelFacts.innerHTML = out;
+  }
+
+  // The facts of the model that produced the 2026 prediction, for one crop.
+  // The specification is written the way it is fitted; the rainfall effect is
+  // restated per 100 mm, which is the unit a reader can hold in their head.
+  function forecastFacts(crop) {
+    var f = forecastFor(crop);
+    var out = "";
+    var per100 = f.b_rain_per_mm * 100;
+    out += fact("2026 model", esc(f.spec_yield_form));
+    out += fact("Estimator", "OLS with district and year fixed effects");
+    out += fact("Rainfall effect", (per100 >= 0 ? "+" : "") + fmt(per100, 4) +
+      " " + esc(f.unit) + " per 100 mm");
+    out += fact("R²", fmt(f.r2, 3));
+    out += fact("Skill vs district median", fmt(f.skill_rmse, 3), !f.beats_baseline);
+    out += fact("Verdict", f.beats_baseline
+      ? "beats the district's own median out of sample"
+      : "does not beat the district's own median — read as 'no evidence of a change'",
+      !f.beats_baseline);
+    if (f.train_seasons && f.train_seasons.length) {
+      out += fact("Fit on", f.train_seasons[0] + " → " + f.train_seasons[f.train_seasons.length - 1] +
+        (f.n_train_rows ? " (" + fmt(f.n_train_rows, 0) + " rows)" : ""));
+    }
+    if (f.test_seasons && f.test_seasons.length) {
+      out += fact("Tested on", f.test_seasons[0] + " → " + f.test_seasons[f.test_seasons.length - 1] +
+        (f.n_test_rows ? " (" + fmt(f.n_test_rows, 0) + " rows)" : ""));
+    }
+    (f.rejected_specs || []).forEach(function (r) {
+      out += fact("Rejected specification", esc(r.spec) + " — " + esc(r.reason), true);
+    });
+    return out;
   }
 
   function countRows() {
@@ -807,160 +876,6 @@
   // the table columns follow the map metric, so the numbers on screen always
   // match the colours on the map
 
-
-  /* ---------------------------------------------------------------------- *
-   * Model comparison chart
-   * ---------------------------------------------------------------------- */
-  function renderStats() {
-    var crops = D.modelled_crops.filter(function (c) { return D.models[c] && D.models[c].stage2; });
-    var shortNames = crops.map(function (c) {
-      return { "Cotton(lint)": "Cotton", "Arhar/Tur": "Arhar", "Moong(Green Gram)": "Moong", "Rice": "Rice" }[c] || c;
-    });
-    if (!crops.length) {
-      els.stats.innerHTML = "";
-      return;
-    }
-    var dR2 = crops.map(function (c) { return D.models[c].stage2.delta_r2; });
-    var skill = crops.map(function (c) {
-      var v = D.models[c].validation;
-      return v ? v.skill_rmse : null;
-    });
-    var pvals = crops.map(function (c) { return D.models[c].stage2.partial_f_p; });
-
-    var trace1 = {
-      x: shortNames,
-      y: dR2,
-      type: "bar",
-      xaxis: "x",
-      yaxis: "y",
-      marker: {
-        color: dR2.map(function (v, i) { return pvals[i] < 0.05 ? "#0b5f7a" : "#9bb3bd"; })
-      },
-      text: dR2.map(function (v, i) {
-        return (v >= 0 ? "+" : "") + v.toFixed(3) + (pvals[i] < 0.05 ? " *" : "");
-      }),
-      textposition: "outside",
-      textfont: { family: "IBM Plex Mono, monospace", size: 10 },
-      hovertemplate: "%{x}<br>ΔR² = %{y:+.4f}<br>partial F p = %{customdata:.3f}<extra></extra>",
-      customdata: pvals,
-      name: "ΔR²"
-    };
-    var trace2 = {
-      x: shortNames,
-      y: skill,
-      type: "bar",
-      xaxis: "x2",
-      yaxis: "y2",
-      marker: { color: skill.map(function (v) { return v > 0 ? "#1f77b4" : "#a8471f"; }) },
-      text: skill.map(function (v) { return (v >= 0 ? "+" : "") + v.toFixed(3); }),
-      textposition: "outside",
-      textfont: { family: "IBM Plex Mono, monospace", size: 10 },
-      hovertemplate: "%{x}<br>skill = %{y:+.3f}<extra></extra>",
-      name: "skill"
-    };
-
-    Plotly.react(els.stats, [trace1, trace2], {
-      margin: { l: 54, r: 16, t: 40, b: 56 },
-      paper_bgcolor: "rgba(0,0,0,0)",
-      plot_bgcolor: "rgba(0,0,0,0)",
-      font: { family: "IBM Plex Sans, sans-serif", size: 10, color: "#454b55" },
-      barmode: "group",
-      showlegend: false,
-      xaxis: {
-        title: { text: "ΔR² (Stage 2 − Stage 1)", font: { size: 10 } },
-        domain: [0, 0.44],
-        anchor: "y",
-        gridcolor: "#e6e2d8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" },
-        zeroline: true,
-        zerolinecolor: "#b3ab9b"
-      },
-      xaxis2: {
-        title: { text: "skill vs median baseline", font: { size: 10 } },
-        domain: [0.56, 1],
-        anchor: "y2",
-        gridcolor: "#e6e2d8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" },
-        zeroline: true,
-        zerolinecolor: "#b3ab9b"
-      },
-      yaxis: {
-        title: { text: "ΔR²", font: { size: 10 } },
-        domain: [0, 1],
-        anchor: "x",
-        gridcolor: "#e6e2d8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
-      },
-      yaxis2: {
-        title: { text: "skill", font: { size: 10 } },
-        domain: [0, 1],
-        anchor: "x2",
-        gridcolor: "#e6e2d8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
-      }
-    }, PLOT_CONFIG);
-
-    els.statsFoot.textContent =
-      "ΔR² is the change in explained variance when dry-spell, heat and VPD features are added " +
-      "to the rainfall quadratic; * marks a partial F-test at p < 0.05. " +
-      "A positive skill score means the weather-only model beats the district-crop median in the " +
-      "test period; a negative score means it does not, and that is a reportable result rather than " +
-      "a failure. The baseline median is computed on the training seasons only.";
-  }
-
-  /* ---------------------------------------------------------------------- *
-   * Window sensitivity panel
-   * ---------------------------------------------------------------------- */
-  function renderWindowPanel() {
-    var ws = D.window_sensitivity;
-    var headRow = document.getElementById("windowHeadRow");
-    var body = document.querySelector("#windowTable tbody");
-    if (!ws || !ws.available) {
-      headRow.innerHTML = "";
-      body.innerHTML = "";
-      document.getElementById("windowFoot").textContent =
-        "The window sensitivity has not been computed in this build.";
-      return;
-    }
-    var order = ws.window_order;
-    headRow.innerHTML =
-      "<th scope='col'>Crop</th>" +
-      order.map(function (w) {
-        return "<th scope='col' class='num'>" + esc(ws.windows[w]) + "</th>";
-      }).join("");
-
-    var html = Object.keys(ws.crops).map(function (crop) {
-      var cells = order.map(function (w) {
-        var r = ws.crops[crop][w];
-        if (!r) return "<td class='num'>—</td>";
-        var sig = r.p2 < 0.05;
-        var txt = "p = " + (r.p2 < 0.001 ? "<0.001" : r.p2.toFixed(3));
-        if (r.vertex_reported) {
-          txt += "<br><strong>R* = " + fmt(r.vertex_mm, 0) + " mm</strong>";
-        } else {
-          txt += "<br>no vertex";
-        }
-        return "<td class='num' style='" +
-          (sig ? "color:var(--color-accent);font-weight:600" : "color:var(--color-ink-muted)") +
-          "'>" + txt + "</td>";
-      }).join("");
-      return "<tr><td>" + esc(cropTitle(crop)) + "</td>" + cells + "</tr>";
-    }).join("");
-    body.innerHTML = html;
-
-    var stable = Object.keys(ws.crops).every(function (crop) {
-      var flags = order.map(function (w) { return ws.crops[crop][w].vertex_reported; });
-      return flags.every(function (f) { return f === flags[0]; });
-    });
-    document.getElementById("windowFoot").textContent =
-      "p is the p-value of the quadratic rainfall term; a vertex is reported only when the term is " +
-      "negative and significant at p < 0.05. " +
-      (stable
-        ? "The conclusion does not depend on the window: the same crops support an inverted-U " +
-          "under all three windows, and the others support none."
-        : "The conclusion depends on the window for at least one crop.") +
-      " The Jun–Sep column reproduces the shipped Stage 1 fit exactly.";
-  }
 
   /* ---------------------------------------------------------------------- *
    * The 2026 forecast
@@ -1314,6 +1229,7 @@
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       font: { family: "IBM Plex Sans, sans-serif", size: 10, color: "#454b55" },
+      hoverlabel: HOVER_LABEL,
       shapes: shapes,
       annotations: annotations,
       showlegend: false,
@@ -1682,6 +1598,13 @@
       '<span class="icon icon--yield" aria-hidden="true"></span>' +
       esc(cropTitle(state.crop)) + " yield";
 
+    // the readout describes whichever model produced the numbers on screen
+    if (els.modelReadoutTitle) {
+      els.modelReadoutTitle.innerHTML =
+        '<span class="icon icon--model" aria-hidden="true"></span>' +
+        (isForecastSeason() ? "2026 forecast model" : "Model readout");
+    }
+
     bandAndLine(els.rainChart, state.crop, "rain");
     bandAndLine(els.yieldChart, state.crop, "yield");
     renderModelFacts();
@@ -1731,7 +1654,6 @@
     styleAll();
     renderLegend();
     renderReadout();
-    renderWindowPanel();
     renderForecast();
 
     els.mapNote.textContent =
@@ -1777,7 +1699,6 @@
   function init() {
     populateControls();
     initMap();
-    renderStats();
 
     els.crop.addEventListener("change", function () {
       state.crop = els.crop.value;
