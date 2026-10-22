@@ -4,7 +4,7 @@
     "era5_grid_area_weighted_centroid"
   ],
   "centroid_note": "area-weighted centroid of intersecting ERA5 0.25 deg grid cells (SRS \u00a72.4 preferred method)",
-  "created_utc": "2026-10-22T08:00:30+00:00",
+  "created_utc": "2026-10-22T08:03:36+00:00",
   "crosswalk_method_counts": {
     "alias_table": 13,
     "exact_normalised": 19
@@ -20,7 +20,7 @@
   "features_used": 33,
   "features_with_data": 32,
   "geojson_features": 33,
-  "geojson_fetched_utc": "2026-10-22T08:00:30+00:00",
+  "geojson_fetched_utc": "2026-10-22T08:03:36+00:00",
   "geojson_sha256": "e228271e9929f7167bc1327f0b0faba5c17fb94dc999ac9c026293b4e9dfd1e1",
   "geojson_source_url": "https://raw.githubusercontent.com/gpavanb1/Telangana-Visualisation/master/data/Telangana.geojson",
   "sha256_districts_csv": "2fb6b02ab2faefaa811e43a31971c9f1060440da8693f6d435772f7601341538",

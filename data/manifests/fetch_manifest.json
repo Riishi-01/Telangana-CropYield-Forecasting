@@ -9,7 +9,7 @@
   ],
   "clean_dataset": "crops_kharif_clean",
   "clean_dataset_sha256": "1078c97bcc75018f7b750e956c1f093cb72531ac07aaa1e9c17878735b2cbec6",
-  "created_utc": "2026-10-22T08:00:32+00:00",
+  "created_utc": "2026-10-22T08:03:38+00:00",
   "crops": [
     "Cotton(lint)",
     "Arhar/Tur",
@@ -51,7 +51,7 @@
     "2019-20"
   ],
   "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
-  "weather_fetched_utc": "2026-10-22T08:00:31+00:00",
+  "weather_fetched_utc": "2026-10-22T08:03:37+00:00",
   "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
   "weather_rows": 113984,
   "weather_sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
