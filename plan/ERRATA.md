@@ -388,6 +388,65 @@ period*, *out-of-sample skill score*, *area-weighted*, *baseline*.
 
 ---
 
+## C12 — the map opens on the 2026 prediction, and the state gets a five-row summary
+
+**C12.1 — the 2026 prediction becomes a season on the map.** The season
+selector gains `2026-27 (prediction)` as its last option, and it is the
+default, with cotton and absolute yield. There are no 2026 yield
+observations, so every value under that option is a model prediction, and the
+map note, the hover card and the season readout all say so. The three map
+metrics all work in the layer and none of them is faked: the yield metric
+colours the predicted yield per hectare, the anomaly metric colours the
+prediction against **that district's own** observed mean yield, and the
+rainfall-deficit metric colours the 2026 rainfall against that district's own
+median rainfall.
+
+**C12.2 — the 2026 layer has its own fixed domain.** The observed map uses one
+fixed domain per crop, so the scale never moves between seasons or districts.
+The 2026 predictions occupy the middle of the observed range — cotton spans
+1.45–3.02 bales/ha inside an observed 0.22–4.90 — so on the observed domain
+they would all land in one pale band and the map would say nothing. The
+prediction layer therefore has its own fixed domain per crop, still fixed
+across the districts and never rescaled by the selection, and the legend
+caption says which domain is in force.
+
+**C12.3 — the season readout carries the 2026 point, dashed.** The kharif
+rainfall chart takes the 2026 district band (p10 285, median 439, p90 731 mm)
+from the ERA5 reanalysis; the crop yield chart takes the 2026 predicted band.
+Both are drawn dashed, exactly as on the forecast chart, because nothing has
+been observed for them, and the x-axis gains `2026-27` as its last category.
+The season label `2026-27` is used everywhere on the page, including the
+forecast chart's last category, which was `2026`.
+
+**C12.4 — the state in one table.** Above the district table, and in the same
+section, a five-row summary: the four crops and the kharif rainfall, each
+against the Telangana average. The crop name is the parent header; 2026 and
+the state average are the two columns under it. The change rides in the 2026
+cell, beside the value, with the sign always printed and the colour carrying
+the same vermillion/bluish-green convention as the district table below it.
+All totals are in millions — with three decimals below 1 M, because moong is
+20 thousand tonnes and two decimals would round it to nothing.
+
+**C12.5 — the rainfall base, and the label that could not be true.** The
+average column for rainfall is the **state-wise average kharif rainfall over
+2014-15 to 2022-23** (848 mm), the mean of the nine seasonal state means,
+against the 2026 state mean of 488 mm. That is **↓ 42.5 %**, and it is the
+figure the report and the page both print. A label of "↓ 50 %+" was requested
+and is not supportable against this base, or against any reading of a
+2014-2022 state-wise average (the pooled nine-season district-season mean
+gives −45.6 %, the mean of the nine season medians −41.4 %, the mean of the
+nine area-weighted season figures −41.5 %). It is true only against 2022-23
+alone (1,133 mm, −56.9 %), which is a different claim. The stronger true
+statement is carried instead: **2026 is the driest kharif season in the
+nine-season record**.
+
+**C12.6 — the district table is untouched.** The `Districts · 2026-27 · 32
+districts · bales/ha` table keeps its subtitle, its five columns, its sorting
+and its click-through to the point-detail panel. The CSV export now also
+carries the 2026 predictions when the prediction layer is selected.
+
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -405,7 +464,7 @@ period*, *out-of-sample skill score*, *area-weighted*, *baseline*.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 41 headless checks |
+| G11 dashboard QA | **PASS** — 55 headless checks |
 | G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
@@ -420,4 +479,7 @@ period*, *out-of-sample skill score*, *area-weighted*, *baseline*.
 | **G11f one forecast chart, indexed (C11.2, C11.3)** | **PASS** — 1 chart, All + 4 crop ticks, 10 x categories with 2026 last, 4 dashed 2026 segments |
 | **G11g the retired sections are gone (C11.1, C11.4)** | **PASS** — no `#curveChart`, no `#districtTable`, no `#forecastGrid` in the DOM |
 | **G11h the 2026 districts table is kept (C11.2)** | **PASS** — "2026-27 · 32 districts · bales/ha" unchanged |
+| **G11i the map opens on the prediction (C12.1)** | **PASS** — default season 2026-27 (prediction), cotton, absolute yield |
+| **G11j the state summary agrees with the artefacts (C12.4)** | **PASS** — 5 rows; every 2026 and average total matches `forecast_series.json` |
+| **G11k the rainfall base and label (C12.5)** | **PASS** — 848 mm base from `rain_state`; 488 mm is −42.5 % |
 | G13 local commits clean; no push | **PASS** — no remote configured |

@@ -334,6 +334,20 @@ statistic and not a selection statistic.
   identically to the prediction and to the Telangana average, and stated
   wherever the 2026 total appears.
 
+**The 2026 layer on the map (ERRATA C12).** 2026 may be shown as a season on
+the map, labelled `2026-27 (prediction)`. Every value under it is a model
+prediction, and the map note, the hover card and the season readout must say
+so. The layer has its own fixed colour domain per crop — the predictions
+occupy the middle of the observed range — and the legend caption must state
+which domain is in force. The season readout may carry the 2026 point, drawn
+**dashed**, on the same convention as the forecast chart.
+
+**The state summary (ERRATA C12.4).** A five-row summary — the four crops and
+the kharif rainfall, each against the Telangana average — may sit above the
+district table. The crop name is the parent header; 2026 and the state
+average are the two columns under it. The change rides in the 2026 cell, with
+the sign always printed. Totals are in millions.
+
 **Display (ERRATA C11).** The 2026 prediction is drawn on a **categorical**
 time axis — the nine observed seasons, then 2026 as its own final step — with
 the 2026 segment **dashed**, because a continuous axis would place 2026 to the

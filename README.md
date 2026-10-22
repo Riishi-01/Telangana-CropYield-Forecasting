@@ -516,6 +516,31 @@ mark. The chart is categorical in time: the nine observed seasons and then
 of the record — its rainfall is below every fitted observation — and that
 reads as "before 2014" rather than "a season that has not happened yet".
 
+**The map opens on the 2026 prediction.** The season selector carries
+`2026-27 (prediction)` as its last option and it is the default, with cotton
+and absolute yield. Every value shown under it is a model prediction, and the
+map's own note, the hover card and the readout all say so. The 2026 layer has
+its own fixed colour domain per crop — the predictions occupy the middle of
+the observed range, so on the observed scale they would all land in one pale
+band.
+
+**The state in one table.** Above the district table, the state totals for the
+four crops and the kharif rainfall, against the Telangana average:
+
+| | 2026 | State avg | |
+|---|---|---|---|
+| **Cotton (lint)** | 4.11 M bales | 5.35 M bales | ↓ 23.3 % |
+| **Arhar / Tur** | 0.191 M t | 0.175 M t | ↑ 8.6 % |
+| **Moong (green gram)** | 0.020 M t | 0.017 M t | ↑ 22.4 % |
+| **Rice** | 8.29 M t | 8.75 M t | ↓ 5.3 % |
+| **Kharif rainfall** | 488 mm | 848 mm | ↓ 42.5 % |
+
+The yield totals are the area-weighted state yield per hectare applied to each
+district's 2022-23 kharif area; the average column is the Telangana average on
+that same area, so the two columns differ only by the model's skill. The
+rainfall average is the mean of the nine seasonal state means, 2014-15 to
+2022-23, against which **2026 is the driest kharif season in the record**.
+
 **A crop can be focused on it.** The chart's selector offers all four crops or
 one; with a single crop the district observations appear behind the line, so
 the spread within a season is visible. The scale is then set by the state line,
