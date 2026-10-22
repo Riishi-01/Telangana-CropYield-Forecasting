@@ -78,10 +78,48 @@ MARKER_END = "2026-09-30"
 PRIMARY_PANEL_START = "2016-17"
 EXTENDED_PANEL_START = "2014-15"
 
-# Crops (SRS §5.3)
+# Crops (SRS §5.3, scope fixed by the owner: Telangana kharif 2014-2022,
+# these four crops only).  The source file carries 36 kharif crop groups; the
+# other 32 are dropped in ingest as unnecessary columns/rows.
 PRIMARY_CROPS = ["Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)"]
 SECONDARY_CROPS = ["Rice"]
 MODELLED_CROPS = PRIMARY_CROPS + SECONDARY_CROPS
+TARGET_CROPS = MODELLED_CROPS  # the project's entire crop scope
+
+# Readable crop labels for the cleaned dataset and the dashboard
+CROP_LABELS = {
+    "Cotton(lint)": "Cotton (lint)",
+    "Arhar/Tur": "Arhar/Tur",
+    "Moong(Green Gram)": "Moong (green gram)",
+    "Rice": "Rice",
+}
+
+# Units as declared by the source column labels (SRS §5.3 unit hazard):
+# cotton is reported in bales, everything else in tonnes.  No conversion is
+# applied - a bale-to-tonne factor would be an assumption, not a cited value.
+CROP_UNITS = {
+    "Cotton(lint)": {"production_unit": "bales", "yield_unit": "bales/ha"},
+    "Arhar/Tur": {"production_unit": "tonnes", "yield_unit": "t/ha"},
+    "Moong(Green Gram)": {"production_unit": "tonnes", "yield_unit": "t/ha"},
+    "Rice": {"production_unit": "tonnes", "yield_unit": "t/ha"},
+}
+
+AREA_UNIT = "ha"
+
+# District eras.  The primary panel is post-2016.  The pre-2016 block is split
+# at 2001-02 because Hyderabad was carved out of Ranga Reddy, so the undivided
+# district boundaries are not constant across the whole pre-2016 period.
+ERA_BOUNDARY_SEASON = "2016-17"
+ERA_HYDERABAD_SEASON = "2001-02"
+
+
+def season_era(season: str) -> str:
+    """Return the era tag for a kharif season label."""
+    if season >= ERA_BOUNDARY_SEASON:
+        return "post2016"
+    if season >= ERA_HYDERABAD_SEASON:
+        return "pre2016"
+    return "pre2001"
 
 # Validation (SRS §5.5) - chronological split only, never random.
 TRAIN_LAST_SEASON = "2019-20"
