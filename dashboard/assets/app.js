@@ -1518,7 +1518,7 @@
         "<tr>" +
           "<th scope='row' class='state-summary__crop'>" + esc(r.label) + "</th>" +
           "<td class='num'>" + esc(r.value) +
-            " <span class='state-summary__delta " + r.cls + "'>" + esc(r.delta) + "</span>" +
+            "<span class='state-summary__delta " + r.cls + "'>" + esc(r.delta) + "</span>" +
           "</td>" +
           "<td class='num'>" + esc(r.avg) + "</td>" +
         "</tr>"
