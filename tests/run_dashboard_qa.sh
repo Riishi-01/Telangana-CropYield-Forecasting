@@ -90,9 +90,22 @@ checks = [
     ("window panel reports the p-value and the vertex",
      "p =" in r.get("windowFirstRow", "")
      and ("no vertex" in r.get("windowFirstRow", "") or "R*" in r.get("windowFirstRow", ""))),
-    ("crop selector offers only the four project crops",
-     r.get("cropOptions") == 4),
-    ("all 12 disclosures present", r.get("disclosureItems") == 12),
+     ("crop selector offers only the four project crops",
+      r.get("cropOptions") == 4),
+     ("crop identity strip shows all four crops",
+      r.get("cropChips") == 4),
+     ("crop identity strip marks exactly one active crop",
+      r.get("cropChipActive") == 1),
+     ("crop identity colours are the Okabe-Ito palette",
+      set(r.get("cropChipColors", [])) == {
+        "rgb(0, 158, 115)", "rgb(213, 94, 0)", "rgb(204, 187, 68)",
+        "rgb(0, 114, 178)"}),
+     ("the 2016 boundary note is visible on the map",
+      r.get("boundaryNoteShown") is True
+      and "not spatially comparable" in r.get("boundaryNote", "")),
+     ("2026 implied range published for rice only",
+      r.get("impliedForRice") is True and r.get("impliedWithheld") == 3),
+     ("all 12 disclosures present", r.get("disclosureItems") == 12),
 ]
 
 failed = 0

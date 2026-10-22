@@ -121,6 +121,30 @@ function run(d, w) {
     d.getElementById("cropSelect").options, function (o) { return o.textContent.trim(); }
   );
 
+  // the crop identity strip (SRS §7.1, Okabe-Ito): one fixed colour per crop
+  results.cropChips = d.querySelectorAll("#cropStrip .cropchip").length;
+  // the browser normalises a hex set via style.background into rgb(), so the
+  // comparison is made on the rgb() form
+  results.cropChipColors = Array.prototype.map.call(
+    d.querySelectorAll("#cropStrip .cropchip__swatch"),
+    function (s) { return s.style.background; }
+  );
+  results.cropChipActive = d.querySelectorAll("#cropStrip .cropchip--on").length;
+
+  // the 2016 boundary discontinuity must be visible on the map itself
+  results.boundaryNote = txt(d.getElementById("mapBoundaryNote"));
+  results.boundaryNoteShown = !!(
+    d.getElementById("mapBoundaryNote") &&
+    d.getElementById("mapBoundaryNote").offsetParent !== null
+  );
+
+  // the 2026 implied-yield band, published for rice only
+  var bundle = frame.contentWindow.TA_DATA || {};
+  var mk = bundle.marker || {};
+  results.impliedForRice = !!(mk.implied_by_crop && mk.implied_by_crop["Rice"]);
+  results.impliedWithheld = mk.implied_withheld ?
+    Object.keys(mk.implied_withheld).length : -1;
+
   publish(results);
 }
 

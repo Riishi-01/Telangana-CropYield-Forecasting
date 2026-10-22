@@ -104,7 +104,7 @@ def main() -> None:
     check("rice: vertex at the 95th percentile",
           close(rice["vertex_frac_obs_below"], 0.95, 1e-2), str(rice["vertex_frac_obs_below"]))
     check("rice: no vertex without season fixed effects",
-          s1["Rice"]["no_season_fe"]["vertex_reported"] is False)
+          s1["Rice"]["no_year_fe"]["vertex_reported"] is False)
     check("rice: extended panel vertex 1350 mm",
           close(s1["Rice"]["extended_panel"]["vertex_mm"], 1349.63, 1e-3),
           str(s1["Rice"]["extended_panel"]["vertex_mm"]))
@@ -174,8 +174,8 @@ def main() -> None:
         check(f"{crop}: skill {skill}", close(v["skill_rmse"], skill, 1e-2),
               str(v["skill_rmse"]))
         check(f"{crop}: no-FE skill {skill_nf}",
-              close(v["no_season_fe"]["skill_rmse"], skill_nf, 1e-2),
-              str(v["no_season_fe"]["skill_rmse"]))
+              close(v["no_year_fe"]["skill_rmse"], skill_nf, 1e-2),
+              str(v["no_year_fe"]["skill_rmse"]))
     check("split is train <= 2019-20 / test >= 2020-21",
           models["validation"]["train_last_season"] == "2019-20"
           and models["validation"]["test_first_season"] == "2020-21")
@@ -238,6 +238,92 @@ def main() -> None:
           str(geo["crosswalk_method_counts"]))
     check("DATA_VERSION is 1.1.0", cfg.data_version() == "1.1.0", cfg.data_version())
     check("README states the DATA_VERSION", in_readme("`1.1.0`"))
+
+    # ---- P1-6 robustness grid ---------------------------------------------
+    grid_path = cfg.PROCESSED / "robustness_grid.json"
+    if grid_path.exists():
+        grid = cfg.read_json(grid_path)
+        gs = grid["summary"]
+        # the shipped specification's correlation, per crop
+        for crop, r in [("Cotton(lint)", 0.066), ("Arhar/Tur", -0.020),
+                        ("Moong(Green Gram)", -0.183), ("Rice", 0.221)]:
+            check(f"grid: {crop} shipped r = {r:+.3f}",
+                  close(gs[crop]["shipped_r"], r, 5e-3),
+                  f"{gs[crop]['shipped_r']:+.4f}")
+        # rice survives within-district; cotton's only significance is pooled
+        check("grid: rice survives within-district",
+              gs["Rice"]["significant_within_district"] is True, str(gs["Rice"]))
+        check("grid: cotton's pooled significance is flagged as a confound",
+              gs["Cotton(lint)"]["pooled_only_confound"] is True,
+              str(gs["Cotton(lint)"]))
+        check("grid: arhar and moong have no significant specification",
+              gs["Arhar/Tur"]["cells_with_significant_quadratic"] == 0
+              and gs["Moong(Green Gram)"]["cells_with_significant_quadratic"] == 0,
+              f"{gs['Arhar/Tur']['cells_with_significant_quadratic']},"
+              f"{gs['Moong(Green Gram)']['cells_with_significant_quadratic']}")
+        # the alignment evidence
+        check("grid: the +1 yr shift flips rice's sign",
+              (gs["Rice"]["alignment_check"]["r_implemented"] or 0) > 0
+              and (gs["Rice"]["alignment_check"]["r_shifted_plus1"] or 0) < 0,
+              str(gs["Rice"]["alignment_check"]))
+        check("grid: row 7 (ERA5-Land) is deferred, not dropped",
+              grid["row_7_status"].startswith("deferred"), grid["row_7_status"])
+        # the README table must agree with the artefact
+        for r in ["+0.066", "−0.020", "−0.183", "+0.221", "+0.256"]:
+            check(f"README grid shows {r}", r in readme, r)
+    else:
+        check("robustness grid artefact present", False, "robustness_grid.json missing")
+
+    # ---- P1-9 slope heterogeneity -----------------------------------------
+    het_path = cfg.PROCESSED / "slope_heterogeneity.json"
+    if het_path.exists():
+        het = cfg.read_json(het_path)["crops"]
+        for crop, p in [("Cotton(lint)", 0.076), ("Arhar/Tur", 0.087),
+                        ("Moong(Green Gram)", 0.600), ("Rice", 0.789)]:
+            check(f"heterogeneity LRT p for {crop} = {p}",
+                  close(het[crop]["lrt_p_value"], p, 5e-3),
+                  f"{het[crop]['lrt_p_value']:.4f}")
+            check(f"heterogeneity LRT is a valid optimum for {crop}",
+                  het[crop]["lrt_valid"] is True, str(het[crop].get("lrt_valid")))
+        check("no crop rejects the shared-slope assumption",
+              all(not het[c]["significant_at_05"] for c in het),
+              str({c: het[c]["significant_at_05"] for c in het}))
+    else:
+        check("slope heterogeneity artefact present", False,
+              "slope_heterogeneity.json missing")
+
+    # ---- P4-15 the 2026 implied range -------------------------------------
+    bundle_path = cfg.DASHBOARD_DATA / "bundle.js"
+    if bundle_path.exists():
+        raw = bundle_path.read_text()
+        bundle = json.loads(raw[raw.index("{"):].rstrip().rstrip(";"))
+        marker = bundle["marker"]
+        published = marker.get("implied_by_crop", {})
+        withheld = marker.get("implied_withheld", {})
+        check("2026 implied range published for rice only",
+              set(published) == {"Rice"}, str(sorted(published)))
+        check("2026 implied range withheld for the other three crops",
+              set(withheld) == {"Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)"},
+              str(sorted(withheld)))
+        if "Rice" in published:
+            imp = published["Rice"]
+            check("rice 2026 implied band p10 = -12.7%",
+                  close(imp["pct_p10"], -12.7, 5e-2), f"{imp['pct_p10']}")
+            check("rice 2026 implied band p90 = -4.9%",
+                  close(imp["pct_p90"], -4.9, 5e-2), f"{imp['pct_p90']}")
+            check("rice 2026 state-mean reading is inside the band",
+                  imp["pct_p10"] <= imp["state_mean_pct_vs_normal"] <= imp["pct_p90"],
+                  f"{imp['pct_p10']} <= {imp['state_mean_pct_vs_normal']} <= {imp['pct_p90']}")
+            check("every published implied yield is positive",
+                  all(r["implied_yield"] > 0 for r in imp["per_district"]),
+                  str(min(r["implied_yield"] for r in imp["per_district"])))
+        # the crop identity palette must be in the bundle
+        check("crop identity palette shipped in the bundle",
+              set(bundle.get("crop_colors", {})) == {
+                  "Rice", "Arhar/Tur", "Moong(Green Gram)", "Cotton(lint)"},
+              str(sorted(bundle.get("crop_colors", {}))))
+    else:
+        check("dashboard bundle present", False, "bundle.js missing")
 
     # ---- §7 the twelve disclosures ----------------------------------------
     for phrase in [
