@@ -281,7 +281,7 @@ def main() -> None:
     assert dim["lat"].notna().all() and dim["lon"].notna().all(), "missing coordinates"
     assert (dim["district_slug"] + "__" + dim["era"]).is_unique, "district_id not unique"
 
-    # -- 2.5 export the 32 used features (simplified) -------------------------
+    # -- 2.5 export the used features (simplified) ---------------------------
     used = [by_name[n] for n in crosswalk["geojson_name"]]
     out_features = []
     for f in used:
@@ -305,14 +305,43 @@ def main() -> None:
                         )
                         if n == f["properties"]["D_NAME"]
                     ),
+                    "no_data": False,
                 },
                 "geometry": g,
             }
         )
+
+    # Hyderabad is in the boundary file but has no yield observation in the
+    # delivered DES data.  It is carried as a "no_data" feature so the map has
+    # no unexplained hole, and it is never given a value.
+    for name in sorted(EXCLUDE_GEOJSON):
+        f = by_name[name]
+        g = json.loads(json.dumps(f["geometry"]))
+        if g["type"] == "Polygon":
+            g["coordinates"] = [simplify_ring(r) for r in g["coordinates"]]
+        else:
+            g["coordinates"] = [
+                [simplify_ring(r) for r in poly] for poly in g["coordinates"]
+            ]
+        out_features.append(
+            {
+                "type": "Feature",
+                "properties": {
+                    "D_NAME": name,
+                    "D_CODE": f["properties"].get("D_CODE"),
+                    "slug": "",
+                    "no_data": True,
+                    "no_data_reason": "no yield observation in the delivered DES file",
+                },
+                "geometry": g,
+            }
+        )
+
     out_geo = {"type": "FeatureCollection", "features": out_features}
     out_path = C.GEO / "districts.geojson"
     out_path.write_text(json.dumps(out_geo, separators=(",", ":")))
-    log(f"  districts.geojson: {len(out_features)} features, "
+    log(f"  districts.geojson: {len(out_features)} features "
+        f"({sum(1 for f in out_features if f['properties'].get('no_data'))} with no data), "
         f"{out_path.stat().st_size/1e6:.2f} MB")
 
     excluded = sorted(set(geo_names) - set(crosswalk["geojson_name"]))

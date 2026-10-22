@@ -101,6 +101,34 @@ def main() -> None:
             if name in m2.params.index
         }
 
+        # Vertex for the Stage 2 fit, under the same rule as Stage 1:
+        # reported only when b2 < 0 and p(b2) < 0.05.
+        vertex = vertex_ci = None
+        has_vertex = False
+        reason = None
+        b2 = float(m2.params["I(rain_mm ** 2)"])
+        p2 = float(m2.pvalues["I(rain_mm ** 2)"])
+        b1 = float(m2.params["rain_mm"])
+        if abs(b2) > 1e-12:
+            vertex = -b1 / (2.0 * b2)
+            d_b1 = -1.0 / (2.0 * b2)
+            d_b2 = b1 / (2.0 * b2**2)
+            cov = m2.cov_params()
+            var = (
+                d_b1**2 * cov.loc["rain_mm", "rain_mm"]
+                + d_b2**2 * cov.loc["I(rain_mm ** 2)", "I(rain_mm ** 2)"]
+                + 2.0 * d_b1 * d_b2 * cov.loc["rain_mm", "I(rain_mm ** 2)"]
+            )
+            se = float(np.sqrt(max(var, 0.0)))
+            vertex_ci = [vertex - 1.959963985 * se, vertex + 1.959963985 * se]
+            has_vertex = bool(b2 < 0 and p2 < 0.05)
+            if not has_vertex:
+                reason = (
+                    "quadratic term is positive - relationship is convex, no inverted-U"
+                    if b2 >= 0
+                    else f"quadratic term is not significant at p<0.05 (p={p2:.3f})"
+                )
+
         stage2[crop] = {
             "formula": SPEC_STAGE2.replace("y ~", "yield ~", 1),
             "n_rows": int(m2.nobs),
@@ -115,10 +143,19 @@ def main() -> None:
             "added_features": extra_coefs,
             "rmse_stage1": float(np.sqrt(np.mean(m1.resid**2))),
             "rmse_stage2": float(np.sqrt(np.mean(m2.resid**2))),
-            "b1": float(m2.params["rain_mm"]),
-            "b2": float(m2.params["I(rain_mm ** 2)"]),
+            "b1": b1,
+            "b2": b2,
             "p1": float(m2.pvalues["rain_mm"]),
-            "p2": float(m2.pvalues["I(rain_mm ** 2)"]),
+            "p2": p2,
+            "vertex_mm": vertex if has_vertex else None,
+            "vertex_ci95_mm": vertex_ci if has_vertex else None,
+            "vertex_reported": has_vertex,
+            "vertex_reason": reason,
+            "mean_fitted": float(np.mean(m2.fittedvalues)),
+            "rain_mean_mm": float(d["rain_mm"].mean()),
+            "rain_sq_mean": float((d["rain_mm"] ** 2).mean()),
+            "rain_min_mm": float(d["rain_mm"].min()),
+            "rain_max_mm": float(d["rain_mm"].max()),
             "unit": str(d["unit"].iloc[0]),
         }
 
