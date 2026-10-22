@@ -7,7 +7,7 @@
   "centroid_method": [
     "era5_grid_area_weighted_centroid"
   ],
-  "created_utc": "2026-10-22T00:29:00+00:00",
+  "created_utc": "2026-10-22T01:46:52+00:00",
   "crops": [
     "Arhar/Tur",
     "Bajra",
@@ -84,10 +84,10 @@
     "2019-20"
   ],
   "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
-  "weather_fetched_utc": "2026-10-22T00:28:03+00:00",
+  "weather_fetched_utc": "2026-10-22T01:44:57+00:00",
   "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
-  "weather_rows": 110080,
-  "weather_sha256": "d0b63f0afc1f32b4ac6fe767bf5a4c865715eddeff0aa03e4b37c92f7d214157",
+  "weather_rows": 113984,
+  "weather_sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
   "weather_source": "open-meteo/era5",
   "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
   "yield_rows": 3185,

@@ -107,6 +107,11 @@ def main() -> None:
 
     df_long = pd.concat(parts, ignore_index=True)
 
+    # crop -> unit for EVERY group in the file, including the groups the QC
+    # filter later removes entirely (e.g. Mesta, which is in bales and is
+    # dropped on area).  This is what the manifest records.
+    file_units = {crop: fields["yield"][2] for crop, fields in groups.items()}
+
     # district / season keys
     df_long["district_raw"] = df_long["district_raw"].astype("string").str.strip()
     df_long["season"] = (
@@ -219,6 +224,8 @@ def main() -> None:
             "districts": sorted(df_long["district_slug"].unique().tolist()),
             "seasons": sorted(df_long["season"].unique().tolist()),
             "crops": sorted(df_long["crop"].unique().tolist()),
+            "crops_in_file": sorted(file_units.keys()),
+            "units_in_file": {k: v for k, v in sorted(file_units.items())},
             "per_crop_rows": {k: int(v) for k, v in counts["rows"].items()},
             "per_crop_unit": {k: v for k, v in counts["unit"].items()},
             "sha256": C.sha256_file(out_path),

@@ -37,6 +37,9 @@ log = cfg.log
 cfg.ensure_dirs()
 
 VERSION = cfg.data_version()
+# OLS is deterministic and takes no random_state argument; the seed is
+# recorded in the manifest and PYTHONHASHSEED is pinned by the runner.
+RANDOM_STATE = cfg.RANDOM_STATE
 
 SPEC_PRIMARY = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id) + C(season)"
 SPEC_NO_SEASON_FE = "y ~ rain_mm + I(rain_mm ** 2) + C(district_id)"

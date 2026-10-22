@@ -390,6 +390,12 @@ def main() -> None:
             "geojson_sha256": geo_sha,
             "geojson_features": len(features),
             "features_used": len(out_features),
+            "features_with_data": sum(
+                1 for f in out_features if not f["properties"].get("no_data")
+            ),
+            "features_no_data": sum(
+                1 for f in out_features if f["properties"].get("no_data")
+            ),
             "features_excluded": excluded,
             "exclusion_reason": "present in the boundary file but absent from the "
             "delivered DES data (no yield observations to map)",

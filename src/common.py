@@ -46,6 +46,13 @@ DATA_VERSION_FILE = ROOT / "DATA_VERSION"
 # --------------------------------------------------------------------------- #
 SEED = 0
 
+# Acceptance criterion A14 ("random_state set in every estimator").  The
+# estimators in this project are OLS fits, which take no random_state argument -
+# there is nothing stochastic to seed.  The seed is recorded anyway (manifest
+# "seed": 0, plus PYTHONHASHSEED=0) so that any stochastic estimator added later
+# inherits a value that is already written into the manifests.
+RANDOM_STATE = SEED
+
 # Source file delivered with the project (immutable, never edited).
 DES_SOURCE = DATA / "horizontal_crop_vertical_year_report.xls"
 DES_RAW_COPY = RAW_DES / "horizontal_crop_vertical_year_report.xls"

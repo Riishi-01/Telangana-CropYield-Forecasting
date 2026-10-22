@@ -1,8 +1,8 @@
 {
   "artifact": "dashboard",
   "bundle_js": "dashboard/data/bundle.js",
-  "bundle_sha256": "6b44cd27741fdba5246ae51eb2c4140207659331a34f8f7c6be00904c75bf3a7",
-  "created_utc": "2026-10-22T01:13:33+00:00",
+  "bundle_sha256": "965d27016bbfb56f359b8c043d5f226d0a37f58a9e58839fb777d536fa2ca4f1",
+  "created_utc": "2026-10-22T01:47:00+00:00",
   "crops": 31,
   "data_version": "1.0.0",
   "districts": 32,

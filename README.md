@@ -175,9 +175,10 @@ the same answer for every crop, so the conclusion does not rest on that conventi
 ### The 2026 rainfall reading
 
 ERA5 observed kharif rainfall for 1 Jun – 30 Sep 2026, across the 32 district
-centroids: **state mean 488 mm**, p10–p90 = 365–603 mm, range 248–816 mm. The fitting
-period's observed range was 374–1,827 mm, so 2026 sits at the **1.6th percentile** of
-the historical distribution and **9 of 32 districts fall below the observed minimum**.
+centroids: **state mean 488 mm**, median 439 mm, p10–p90 = 285–731 mm, range 248–816 mm.
+The fitting period's observed range was 374–1,827 mm, so 2026 sits at the **1.6th
+percentile** of the historical distribution and **9 of 32 districts fall below the
+observed minimum**.
 
 The dashboard and F1 therefore draw the 2026 rainfall as a dashed marker on the fitted
 curve, with its district band, and state that any implied yield is a reading of the
