@@ -495,6 +495,25 @@ def main() -> None:
                   f"{arrow} {abs(pct):.1f} %" in readme
                   or f"{arrow} {abs(pct):.1f}%" in readme,
                   f"{arrow} {abs(pct):.1f}%")
+            # the rainfall over this crop's own area.  The page rounds half
+            # away from zero (toLocaleString), so the check does the same
+            # rather than Python's round-half-to-even.
+            import math  # noqa: PLC0415
+
+            def whole(v):
+                return int(math.floor(v + 0.5))
+
+            rn = res.get("rain") or {}
+            check(f"the summary table gives the 2026 rainfall for {crop}",
+                  f"{whole(rn['mm_2026'])} mm" in readme, f"{whole(rn['mm_2026'])} mm")
+            check(f"the summary table gives the average rainfall for {crop}",
+                  f"{whole(rn['mm_average'])} mm" in readme, f"{whole(rn['mm_average'])} mm")
+            rpct = rn["pct_vs_average"]
+            rarrow = "\u2193" if rpct < 0 else "\u2191"
+            check(f"the summary table gives the rainfall change for {crop}",
+                  f"{rarrow} {abs(rpct):.1f} %" in readme
+                  or f"{rarrow} {abs(rpct):.1f}%" in readme,
+                  f"{rarrow} {abs(rpct):.1f}%")
 
     bundle_path = cfg.DASHBOARD_DATA / "bundle.js"
     if bundle_path.exists():

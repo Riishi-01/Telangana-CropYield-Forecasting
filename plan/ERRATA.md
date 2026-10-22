@@ -447,6 +447,26 @@ carries the 2026 predictions when the prediction layer is selected.
 
 ---
 
+## C13 — the state summary carries the rainfall over each crop's own area
+
+**C13.1 — a rainfall column beside every crop.** The state summary gains two
+columns: the kharif rainfall for 2026 and its average, beside the yield
+columns. The rainfall is **area-weighted over that crop's own area** — the
+2022-23 kharif area of the crop, weighted by the observed 2026 rainfall, with
+the average taken over 2014-15 to 2022-23 of the crop's area-weighted seasonal
+rainfall. The state mean is the same number for every crop, so repeating it
+four times would say nothing; each crop is grown on a different area and the
+rainfall over that area differs (435 mm for moong against 477 mm for arhar).
+
+**C13.2 — the state row stays.** The last row is still the state-wide figure:
+488 mm against a nine-season state mean of 848 mm, ↓ 42.5 %, and 2026 is the
+driest kharif season in the nine-season record. The two averages share a
+period — 2014-15 to 2022-23 — so the crop rows and the state row are
+comparable, and the crop rows are computed over the full nine-season record
+rather than the primary panel.
+
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -464,7 +484,7 @@ carries the 2026 predictions when the prediction layer is selected.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 55 headless checks |
+| G11 dashboard QA | **PASS** — 56 headless checks |
 | G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
@@ -482,4 +502,5 @@ carries the 2026 predictions when the prediction layer is selected.
 | **G11i the map opens on the prediction (C12.1)** | **PASS** — default season 2026-27 (prediction), cotton, absolute yield |
 | **G11j the state summary agrees with the artefacts (C12.4)** | **PASS** — 5 rows; every 2026 and average total matches `forecast_series.json` |
 | **G11k the rainfall base and label (C12.5)** | **PASS** — 848 mm base from `rain_state`; 488 mm is −42.5 % |
+| **G11l the crop rainfall columns (C13.1)** | **PASS** — 4 crops × (2026, average) rainfall, each over that crop's own area |
 | G13 local commits clean; no push | **PASS** — no remote configured |

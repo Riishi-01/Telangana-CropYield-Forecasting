@@ -527,19 +527,26 @@ band.
 **The state in one table.** Above the district table, the state totals for the
 four crops and the kharif rainfall, against the Telangana average:
 
-| | 2026 | State avg | |
-|---|---|---|---|
-| **Cotton (lint)** | 4.11 M bales | 5.35 M bales | ↓ 23.3 % |
-| **Arhar / Tur** | 0.191 M t | 0.175 M t | ↑ 8.6 % |
-| **Moong (green gram)** | 0.020 M t | 0.017 M t | ↑ 22.4 % |
-| **Rice** | 8.29 M t | 8.75 M t | ↓ 5.3 % |
-| **Kharif rainfall** | 488 mm | 848 mm | ↓ 42.5 % |
+| | 2026 | State avg | Rainfall 2026 | Rainfall avg | |
+|---|---|---|---|---|---|
+| **Cotton (lint)** | 4.11 M bales | 5.35 M bales | 454 mm | 836 mm | ↓ 23.3 % / ↓ 45.7 % |
+| **Arhar / Tur** | 0.191 M t | 0.175 M t | 477 mm | 794 mm | ↑ 8.6 % / ↓ 40.0 % |
+| **Moong (green gram)** | 0.020 M t | 0.017 M t | 435 mm | 823 mm | ↑ 22.4 % / ↓ 47.2 % |
+| **Rice** | 8.29 M t | 8.75 M t | 459 mm | 844 mm | ↓ 5.3 % / ↓ 45.6 % |
+| **Kharif rainfall (state)** | 488 mm | 848 mm | — | — | ↓ 42.5 % |
 
 The yield totals are the area-weighted state yield per hectare applied to each
 district's 2022-23 kharif area; the average column is the Telangana average on
-that same area, so the two columns differ only by the model's skill. The
-rainfall average is the mean of the nine seasonal state means, 2014-15 to
-2022-23, against which **2026 is the driest kharif season in the record**.
+that same area, so the two columns differ only by the model's skill.
+
+**The rainfall beside a crop is the rainfall over that crop's own area.** The
+state mean is the same figure for every crop, so it would say nothing beside a
+crop; each crop is grown on a different area, and the rainfall over that area
+differs — 435 mm for moong against 477 mm for arhar. The 2026 figure weights
+the observed 2026 rainfall by the crop's 2022-23 area; the average is the mean
+over 2014-15 to 2022-23 of the crop's area-weighted seasonal rainfall. The last
+row is the state-wide figure: 488 mm against a nine-season state mean of
+848 mm, so **2026 is the driest kharif season in the record**.
 
 **A crop can be focused on it.** The chart's selector offers all four crops or
 one; with a single crop the district observations appear behind the line, so
