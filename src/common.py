@@ -173,9 +173,17 @@ CROP_COLORS = {
 
 # Mandatory disclosure strings (SRS §5.6, §9)
 DISCLOSURE_2026 = (
-    "Response curve fitted on observed kharif yields. 2026 rainfall is ERA5 observed. "
-    "Any implied yield is a reading of the fitted curve, not a validated forecast - "
-    "the extrapolation gap is 3+ years."
+    "2026 is a model prediction, not an observation and not a validated forecast. "
+    "Each crop is forecast by its own specification, selected by leave-one-season-out "
+    "cross-validation inside the fitting period, and the out-of-sample skill of that "
+    "specification is printed beside every prediction. The extrapolation gap is four "
+    "seasons, and the 2026 rainfall sits below the fitted range."
+)
+DISCLOSURE_2026_FORECAST = (
+    "2026 is a model prediction. The 2026 figures come from each crop's own "
+    "specification, selected by leave-one-season-out cross-validation inside the "
+    "fitting period; the out-of-sample skill of that specification is printed "
+    "beside every prediction."
 )
 DISCLOSURE_ERA5 = (
     "Reanalysis, not observation. ERA5 is a model-assimilated reanalysis product at "

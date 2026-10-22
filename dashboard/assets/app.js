@@ -88,7 +88,10 @@
     season: D.seasons[D.seasons.length - 1],
     metric: "anomaly",
     pinned: null,
-    sort: { key: "label", dir: 1 }
+    // the crops ticked in the forecast chart; null means "all of them"
+    forecastCrops: null,
+    forecastSort: { key: "diff", dir: 1 },
+    forecastPoint: null
   };
 
   var els = {
@@ -108,14 +111,20 @@
     rainTitle: document.getElementById("rainTitle"),
     yieldTitle: document.getElementById("yieldTitle"),
     modelFacts: document.getElementById("modelFacts"),
-    curve: document.getElementById("curveChart"),
-    curveNote: document.getElementById("curveNote"),
-    curveFoot: document.getElementById("curveFoot"),
     markerDisclaimer: document.getElementById("markerDisclaimer"),
-    tableBody: document.querySelector("#districtTable tbody"),
-    tableSubtitle: document.getElementById("tableSubtitle"),
     stats: document.getElementById("statsChart"),
     statsFoot: document.getElementById("statsFoot"),
+    forecastChart: document.getElementById("forecastChart"),
+    forecastTicks: document.getElementById("forecastTicks"),
+    forecastLegend: document.getElementById("forecastLegend"),
+    forecastFoot: document.getElementById("forecastFoot"),
+    forecastOffScale: 0,
+    forecastDetail: document.getElementById("forecastDetail"),
+    forecastDetailEmpty: document.getElementById("forecastDetailEmpty"),
+    forecastDetailBody: document.getElementById("forecastDetailBody"),
+    forecastTableBody: document.querySelector("#forecastTable tbody"),
+    forecastTableSubtitle: document.getElementById("forecastTableSubtitle"),
+    forecastTableFoot: document.getElementById("forecastTableFoot"),
     disclosures: document.getElementById("disclosureList"),
     colophon: document.getElementById("colophonMeta"),
     dataVersion: document.getElementById("dataVersion")
@@ -439,8 +448,6 @@
     state.pinned = state.pinned === slug ? null : slug;
     styleAll();
     highlightPinned();
-    renderTable();
-    renderCurve();
     renderReadout();
   }
 
@@ -582,277 +589,10 @@
     return rows.filter(function (r) { return !!r; }).length;
   }
 
-  /* ---------------------------------------------------------------------- *
-   * Response curve
-   * ---------------------------------------------------------------------- */
-  function renderCurve() {
-    var crop = state.crop;
-    var points = [];
-    D.seasons.forEach(function (season) {
-      (D.panel[crop] || {})[season] || [];
-      var rows = panelFor(crop, season) || [];
-      rows.forEach(function (v, i) {
-        if (!v) return;
-        points.push({
-          rain: v[2],
-          yield: v[0],
-          anomaly: v[1],
-          dry: v[3],
-          heat: v[5],
-          district: D.districts[i].l,
-          slug: D.districts[i].s,
-          season: season
-        });
-      });
-    });
-
-    var traces = [];
-    var annotations = [];
-    var shapes = [];
-
-    // the axis always shows the 2026 band, so the reader can see how far
-    // outside the fitted range the 2026 rainfall sits
-    var axisRange = null;
-    if (points.length) {
-      var rains = points.map(function (p) { return p.rain; });
-      var rMin = Math.min.apply(null, rains);
-      var rMax = Math.max.apply(null, rains);
-      if (D.marker && D.marker.available) {
-        rMin = Math.min(rMin, D.marker.p10);
-        rMax = Math.max(rMax, D.marker.p90);
-      }
-      var pad = (rMax - rMin) * 0.04;
-      axisRange = [rMin - pad, rMax + pad];
-    }
-
-    if (isModelled(crop)) {
-      var s1 = modelFor(crop).stage1;
-      var y0 = s1.mean_fitted;
-      var rbar = s1.rain_mean_mm;
-      var r2bar = s1.rain_sq_mean;
-      var xs = points.map(function (p) { return p.rain; });
-      var xmin = Math.min.apply(null, xs);
-      var xmax = Math.max.apply(null, xs);
-      var grid = [];
-      for (var g = 0; g <= 120; g++) grid.push(xmin + ((xmax - xmin) * g) / 120);
-      var curve = grid.map(function (r) {
-        return y0 + s1.b1 * (r - rbar) + s1.b2 * (r * r - r2bar);
-      });
-      traces.push({
-        x: grid,
-        y: curve,
-        type: "scatter",
-        mode: "lines",
-        line: { color: cropColor(state.crop), width: 2.4 },
-        name: "fitted quadratic (Stage 1)",
-        hovertemplate: "rainfall %{x:.0f} mm<br>expected yield %{y:.3f}<extra></extra>"
-      });
-
-      if (s1.vertex_reported) {
-        var vy = y0 + s1.b1 * (s1.vertex_mm - rbar) + s1.b2 * (Math.pow(s1.vertex_mm, 2) - r2bar);
-        traces.push({
-          x: [s1.vertex_mm],
-          y: [vy],
-          type: "scatter",
-          mode: "markers",
-          marker: { color: cropColor(state.crop), size: 13, line: { color: "#fffdf9", width: 2 } },
-          name: "rainfall optimum R*",
-          hovertemplate: "R* = %{x:.0f} mm<extra></extra>"
-        });
-        annotations.push({
-          x: s1.vertex_mm,
-          y: vy,
-          text: "R* = " + fmt(s1.vertex_mm, 0) + " mm",
-          showarrow: true,
-          arrowhead: 0,
-          ax: -30,
-          ay: -34,
-          bgcolor: "rgba(255,253,249,0.92)",
-          bordercolor: "#b3ab9b",
-          borderwidth: 1,
-          font: { family: "IBM Plex Mono, monospace", size: 10, color: "#16181d" }
-        });
-      } else {
-        annotations.push({
-          x: 0.985,
-          y: 0.97,
-          xref: "paper",
-          yref: "paper",
-          xanchor: "right",
-          text: "No significant inverted-U — the quadratic term is not supported (p = " + fmt(s1.p2, 3) + ")",
-          showarrow: false,
-          align: "right",
-          bgcolor: "rgba(246,231,221,0.94)",
-          bordercolor: "#a8471f",
-          borderwidth: 1,
-          font: { family: "IBM Plex Sans, sans-serif", size: 10, color: "#6d2f13" }
-        });
-      }
-    }
-
-    // observations: the selected season is emphasised, the rest are context
-    var rest = points.filter(function (p) { return p.season !== state.season; });
-    var focus = points.filter(function (p) { return p.season === state.season; });
-
-    function pointTrace(list, name, colour, size) {
-      return {
-        x: list.map(function (p) { return p.rain; }),
-        y: list.map(function (p) { return p.yield; }),
-        customdata: list.map(function (p) {
-          return [p.district, p.season, p.anomaly, p.dry, p.heat, p.slug];
-        }),
-        type: "scatter",
-        mode: "markers",
-        marker: { color: colour, size: size, opacity: 0.55, line: { width: 0 } },
-        name: name,
-        hovertemplate:
-          "<b>%{customdata[0]}</b> · %{customdata[1]}<br>" +
-          "rainfall %{x:.0f} mm · yield %{y:.3f} " + unitOf(crop) + "<br>" +
-          "anomaly %{customdata[2]:+.0f}% · longest dry run %{customdata[3]} d<extra></extra>"
-      };
-    }
-
-    traces.push(pointTrace(rest, "other seasons", "#9aa6b2", 6));
-    traces.push(pointTrace(focus, state.season, "#1f77b4", 9));
-
-    if (state.pinned) {
-      var pin = points.filter(function (p) { return p.slug === state.pinned; });
-      if (pin.length) {
-        traces.push({
-          x: pin.map(function (p) { return p.rain; }),
-          y: pin.map(function (p) { return p.yield; }),
-          customdata: pin.map(function (p) { return [p.district, p.season]; }),
-          type: "scatter",
-          mode: "markers",
-          marker: {
-            color: "rgba(0,0,0,0)",
-            size: 15,
-            line: { color: "#16181d", width: 1.6 }
-          },
-          name: districtLabel(state.pinned),
-          hovertemplate: "<b>%{customdata[0]}</b> · %{customdata[1]}<br>rainfall %{x:.0f} mm · yield %{y:.3f}<extra></extra>"
-        });
-      }
-    }
-
-    // 2026 marker (P4-15: a BAND, never a dashed line asserting a value)
-    if (D.marker && D.marker.available) {
-      var m26 = D.marker.state_mean;
-      var lo26 = D.marker.p10;
-      var hi26 = D.marker.p90;
-      // the observed 2026 rainfall range across districts, as a shaded band
-      shapes.push({
-        type: "rect",
-        x0: lo26, x1: hi26, y0: 0, y1: 1, yref: "paper",
-        fillcolor: "rgba(17,17,17,0.06)",
-        line: { width: 0 },
-        layer: "below"
-      });
-      shapes.push({
-        type: "line",
-        x0: m26, x1: m26, y0: 0, y1: 1, yref: "paper",
-        line: { color: "#111111", width: 1.2, dash: "dot" }
-      });
-      // the implied-yield range, published only where the fitted curve is
-      // statistically supported (see the bundle's implied_withheld)
-      var imp = D.marker.implied_by_crop ? D.marker.implied_by_crop[crop] : null;
-      if (imp && isModelled(crop)) {
-        var s = modelFor(crop).stage1;
-        var y26 = s.mean_fitted + s.b1 * (m26 - s.rain_mean_mm) +
-          s.b2 * (Math.pow(m26, 2) - s.rain_sq_mean);
-        // the band spans the range of readings across districts, in %
-        // of each district's own normal
-        var bandLo = imp.state_mean_pct_vs_normal + imp.pct_p10 - imp.pct_median;
-        var bandHi = imp.state_mean_pct_vs_normal + imp.pct_p90 - imp.pct_median;
-        // place the band vertically around the point reading
-        var halfLo = (y26 * bandLo) / 100;
-        var halfHi = (y26 * bandHi) / 100;
-        shapes.push({
-          type: "rect",
-          x0: m26 - 26, x1: m26 + 26,
-          y0: Math.min(y26 + halfLo, y26 + halfHi),
-          y1: Math.max(y26 + halfLo, y26 + halfHi),
-          fillcolor: "rgba(17,17,17,0.13)",
-          line: { width: 0 },
-          layer: "below"
-        });
-        traces.push({
-          x: [m26],
-          y: [y26],
-          type: "scatter",
-          mode: "markers",
-          marker: { color: "rgba(0,0,0,0)", size: 13, line: { color: "#111111", width: 1.8 } },
-          name: "2026 reading on the fitted curve",
-          hovertemplate:
-            "2026 rainfall " + fmt(m26, 0) + " mm (state mean)<br>" +
-            "reading of the fitted curve: %{y:.3f} " + unitOf(crop) +
-            "<br>across the 32 districts the reading spans " +
-            fmt(imp.pct_p10, 1) + "% to " + fmt(imp.pct_p90, 1) +
-            "% of each district's own normal" +
-            "<br><i>not a forecast</i><extra></extra>"
-        });
-        annotations.push({
-          x: m26, y: y26,
-          xref: "x", yref: "y",
-          text: "2026 position on the fitted curve",
-          showarrow: false,
-          xanchor: "left", yanchor: "bottom",
-          xshift: 10, yshift: 6,
-          font: { family: "IBM Plex Mono, monospace", size: 9, color: "#16181d" }
-        });
-      } else if (isModelled(crop)) {
-        // no supported curve: the rainfall position is shown, but no implied
-        // yield is offered for this crop
-        annotations.push({
-          x: m26, y: 0.03, xref: "x", yref: "paper",
-          text: "2026 rainfall — no implied yield for this crop",
-          showarrow: false,
-          xanchor: "left", yanchor: "bottom",
-          xshift: 8,
-          font: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
-        });
-      }
-    }
-
-    Plotly.react(els.curve, traces, {
-      margin: { l: 64, r: 24, t: 18, b: 52 },
-      paper_bgcolor: "rgba(0,0,0,0)",
-      plot_bgcolor: "rgba(0,0,0,0)",
-      font: { family: "IBM Plex Sans, sans-serif", size: 11, color: "#454b55" },
-      shapes: shapes,
-      annotations: annotations,
-      hovermode: "closest",
-      legend: {
-        orientation: "h",
-        y: -0.19,
-        font: { size: 10 },
-        bgcolor: "rgba(0,0,0,0)"
-      },
-      xaxis: {
-        title: { text: "kharif rainfall, 1 Jun – 30 Sep (mm)", font: { size: 11 } },
-        gridcolor: "#e6e2d8",
-        linecolor: "#d9d4c8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" },
-        zeroline: false,
-        range: axisRange
-      },
-      yaxis: {
-        title: { text: "yield (" + unitOf(crop) + ")", font: { size: 11 } },
-        gridcolor: "#e6e2d8",
-        linecolor: "#d9d4c8",
-        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" },
-        zeroline: false
-      }
-    }, PLOT_CONFIG);
-
-    els.curve.on("plotly_click", function (ev) {
-      var cd = ev.points && ev.points[0] && ev.points[0].customdata;
-      if (cd && cd[5]) selectDistrict(cd[5]);
-    });
-  }
 
   /* ---------------------------------------------------------------------- *
-   * Table
+   * The rows behind the CSV export.  The on-screen district table was
+   * retired in v1.2.0, but the export still ships the same rows.
    * ---------------------------------------------------------------------- */
   function tableRows() {
     var rows = panelFor(state.crop, state.season) || [];
@@ -876,117 +616,7 @@
 
   // the table columns follow the map metric, so the numbers on screen always
   // match the colours on the map
-  function tableColumns() {
-    if (state.metric === "deficit") {
-      return [
-        { key: "label", title: "District", num: false },
-        { key: "rain", title: "Rain (mm)", num: true },
-        { key: "deficit", title: "Rain deficit (%)", num: true },
-        { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
-        { key: "dry", title: "Longest dry run (d)", num: true },
-        { key: "heat", title: "Heat days", num: true }
-      ];
-    }
-    if (state.metric === "yield") {
-      return [
-        { key: "label", title: "District", num: false },
-        { key: "rain", title: "Rain (mm)", num: true },
-        { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
-        { key: "dry", title: "Longest dry run (d)", num: true },
-        { key: "heat", title: "Heat days", num: true }
-      ];
-    }
-    return [
-      { key: "label", title: "District", num: false },
-      { key: "rain", title: "Rain (mm)", num: true },
-      { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
-      { key: "anomaly", title: "Anomaly (%)", num: true },
-      { key: "dry", title: "Longest dry run (d)", num: true },
-      { key: "heat", title: "Heat days", num: true }
-    ];
-  }
 
-  function renderTable() {
-    var rows = tableRows();
-    var key = state.sort.key;
-    var dir = state.sort.dir;
-    rows.sort(function (a, b) {
-      var x = a[key];
-      var y = b[key];
-      if (typeof x === "string") return x.localeCompare(y) * dir;
-      if (x === null || x === undefined) return 1;
-      if (y === null || y === undefined) return -1;
-      return ((x || 0) - (y || 0)) * dir;
-    });
-
-    var cols = tableColumns();
-    var head = document.querySelector("#districtTable thead tr");
-    head.innerHTML = cols.map(function (c) {
-      var sortAttr = ' data-sort="' + c.key + '"';
-      var aria = state.sort.key === c.key
-        ? ' aria-sort="' + (state.sort.dir === 1 ? "ascending" : "descending") + '"'
-        : "";
-      return "<th scope='col'" + sortAttr + aria +
-        (c.num ? " class='num'" : "") + ">" + esc(c.title) + "</th>";
-    }).join("");
-
-    var unit = unitOf(state.crop);
-    var html = rows.map(function (r) {
-      var cells = cols.map(function (c) {
-        if (c.key === "label") return "<td>" + esc(r.label) + "</td>";
-        var v = r[c.key];
-        var txt = v === null || v === undefined
-          ? "—"
-          : (c.key === "yield" ? fmt(v, 2)
-             : c.key === "anomaly" ? fmt(v, 0)
-             : c.key === "deficit" ? fmt(v, 0)
-             : fmt(v, 0));
-        return "<td class='num'>" + txt + "</td>";
-      }).join("");
-      return (
-        "<tr data-slug='" + r.slug + "'" + (state.pinned === r.slug ? ' class="is-pinned"' : "") +
-        " tabindex='0'>" + cells + "</tr>"
-      );
-    }).join("");
-
-    var missing = D.districts.filter(function (d) {
-      return d.s && !rows.some(function (r) { return r.slug === d.s; });
-    });
-    if (missing.length) {
-      html += "<tr class='is-empty'><td colspan='" + cols.length + "'>No observation this season: " +
-        missing.map(function (d) { return esc(d.l); }).join(", ") + "</td></tr>";
-    }
-
-    els.tableBody.innerHTML = html;
-
-    Array.prototype.forEach.call(els.tableBody.querySelectorAll("tr[data-slug]"), function (tr) {
-      tr.addEventListener("click", function () { selectDistrict(tr.getAttribute("data-slug")); });
-      tr.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          selectDistrict(tr.getAttribute("data-slug"));
-        }
-      });
-    });
-
-    els.tableSubtitle.textContent =
-      state.season + " · " + rows.length + " districts · " + unit;
-  }
-
-  // The table header is rebuilt when the map metric changes, so the sort
-  // handler is delegated from the header row rather than bound per cell.
-  document.getElementById("districtTable").addEventListener("click", function (e) {
-    var th = e.target.closest("th[data-sort]");
-    if (!th) return;
-    var key = th.getAttribute("data-sort");
-    if (state.sort.key === key) {
-      state.sort.dir = -state.sort.dir;
-    } else {
-      state.sort.key = key;
-      state.sort.dir = 1;
-    }
-    renderTable();
-  });
 
   /* ---------------------------------------------------------------------- *
    * Model comparison chart
@@ -1143,8 +773,706 @@
   }
 
   /* ---------------------------------------------------------------------- *
-   * CSV export
+   * The 2026 forecast
+   * ---------------------------------------------------------------------- *
+   * ONE chart, up to four crops.  Each crop is forecast by its OWN model -
+   * the one that survived leave-one-season-out cross-validation inside the
+   * fitting period and produced valid yields at 2026's rainfall.
+   *
+   * THE Y AXIS IS INDEXED.  Cotton is measured in bales per hectare and the
+   * other three in tonnes, so four crops cannot share a raw axis.  Each crop
+   * is indexed to its own Telangana average over the fitted period
+   * (2016-17 - 2022-23 = 100), which is the same area-weighted reference the
+   * forecast table uses.  The 2026 endpoint therefore reads directly as the
+   * forecast difference: 100 + the per-cent change against that reference.
+   *
+   * THE STATE LINE IS AREA-WEIGHTED: sum(yield x area) / sum(area) over the
+   * districts reporting in that season.  The unweighted median of district
+   * yields is not used - it is not comparable across the 2016
+   * reorganisation, whereas the state aggregate is a state total divided by
+   * a state area and is the same quantity on both sides of the boundary.
+   *
+   * The x axis is CATEGORICAL: the nine observed seasons, then 2026 as its
+   * own step.  A continuous axis would place 2026 (488 mm state mean, below
+   * every fitted observation) to the LEFT of the record, which reads as
+   * "before 2014" rather than "a prediction for a season that has not
+   * happened yet".
+   */
+
+  // the crops the forecast covers, in the canonical order
+  function forecastCrops() {
+    var fc = D.forecast || {};
+    return (D.crops || []).filter(function (c) { return fc[c]; });
+  }
+
+  // the crops currently ticked in the chart; null means every one of them
+  function tickedCrops() {
+    var all = forecastCrops();
+    if (!state.forecastCrops) return all;
+    var picked = all.filter(function (c) { return state.forecastCrops.indexOf(c) >= 0; });
+    return picked.length ? picked : all;
+  }
+
+  function renderForecastTicks() {
+    var box = els.forecastTicks;
+    if (!box) return;
+    var all = forecastCrops();
+    var ticked = tickedCrops();
+    var everyOne = ticked.length === all.length;
+    box.innerHTML = "";
+
+    var allBtn = document.createElement("button");
+    allBtn.type = "button";
+    allBtn.className = "forecast-tick forecast-tick--all" + (everyOne ? " forecast-tick--on" : "");
+    allBtn.setAttribute("aria-pressed", everyOne ? "true" : "false");
+    allBtn.textContent = "All crops";
+    allBtn.addEventListener("click", function () {
+      state.forecastCrops = null;
+      renderForecast();
+    });
+    box.appendChild(allBtn);
+
+    all.forEach(function (crop) {
+      var on = ticked.indexOf(crop) >= 0;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "forecast-tick" + (on ? " forecast-tick--on" : "");
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.setAttribute("data-crop", crop);
+      var sw = document.createElement("span");
+      sw.className = "forecast-tick__swatch";
+      sw.style.background = cropColor(crop);
+      var t = document.createElement("span");
+      t.textContent = cropTitle(crop);
+      b.appendChild(sw);
+      b.appendChild(t);
+      b.addEventListener("click", function () {
+        var current = tickedCrops();
+        // clicking the crop that is already alone returns to the full set;
+        // clicking any other crop focuses on it
+        if (current.length === 1 && current[0] === crop) {
+          state.forecastCrops = null;
+        } else {
+          state.forecastCrops = [crop];
+        }
+        renderForecast();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  // One crop's series: the district observations, and the area-weighted state
+  // yield per hectare for each season.
+  function forecastSeries(crop) {
+    var seasons = D.all_seasons || D.seasons;
+    var points = [];
+    var stateLine = [];
+
+    seasons.forEach(function (season) {
+      var rows = [];
+      var pre = false;
+
+      if (D.extended && D.extended[crop] && D.extended[crop][season]) {
+        pre = true;
+        D.extended[crop][season].forEach(function (r) {
+          rows.push({
+            slug: r.s, label: r.l, y: r.y, rain: r.r,
+            dry: r.d, heat: r.h, area: r.a
+          });
+        });
+      } else {
+        var row = D.panel[crop] ? D.panel[crop][season] : null;
+        if (row) {
+          D.districts.forEach(function (d, i) {
+            var v = row[i];
+            if (!v) return;
+            rows.push({
+              slug: d.s, label: d.l, y: v[0], rain: v[2],
+              dry: v[3], heat: v[5], area: v[8]
+            });
+          });
+        }
+      }
+
+      rows.forEach(function (r) {
+        points.push({
+          season: season, slug: r.slug, label: r.label, y: r.y,
+          rain: r.rain, dry: r.dry, heat: r.heat, area: r.area, pre: pre
+        });
+      });
+
+      // the state figure: area-weighted, over the districts reporting
+      var wsum = 0, wy = 0, n = 0;
+      rows.forEach(function (r) {
+        if (r.y === null || r.y === undefined) return;
+        if (!r.area) return;
+        wsum += r.area;
+        wy += r.area * r.y;
+        n++;
+      });
+      if (wsum > 0) {
+        stateLine.push({
+          season: season,
+          y: wy / wsum,
+          n: n,
+          pre: pre
+        });
+      }
+    });
+
+    return { points: points, stateLine: stateLine };
+  }
+
+  function renderForecast() {
+    if (!els.forecastChart) return;
+    var fc = D.forecast || {};
+    var all = forecastCrops();
+    if (!all.length) {
+      els.forecastChart.innerHTML = "";
+      els.forecastFoot.textContent =
+        "The 2026 forecast has not been computed in this build.";
+      return;
+    }
+
+    renderForecastTicks();
+    drawForecastChart();
+    renderForecastLegend();
+    renderForecastFoot();
+    renderForecastTable();
+  }
+
+  function drawForecastChart() {
+    var el = els.forecastChart;
+    var fc = D.forecast || {};
+    var seasons = D.all_seasons || D.seasons;
+    var xAxis = seasons.concat(["2026"]);
+    var boundaryAt = seasons.indexOf(D.primary_panel_start) - 0.5;
+    var crops = tickedCrops();
+    var one = crops.length === 1;
+
+    var traces = [];
+    var scaleVals = [];
+    var pointVals = [];
+
+    crops.forEach(function (crop) {
+      var f = fc[crop];
+      var series = forecastSeries(crop);
+      var colour = cropColor(crop);
+      var unit = f.unit;
+      var ref = f.state.reference_yield_per_ha;
+      var st = f.state;
+
+      // the district observations, drawn only when a single crop is on the
+      // chart: four crops would put more than a thousand points behind the
+      // lines, which reads as noise rather than as spread
+      if (one) {
+        var pre = series.points.filter(function (p) { return p.pre; });
+        var post = series.points.filter(function (p) { return !p.pre; });
+        series.points.forEach(function (p) {
+          if (p.y === null || p.y === undefined || !ref) return;
+          pointVals.push(100 * p.y / ref);
+        });
+        traces.push(pointTrace(pre, "9 undivided parent districts (2014-15, 2015-16)",
+          "#9aa1ab", 0.5, crop, unit, "pre", ref));
+        traces.push(pointTrace(post, "32 post-reorganisation districts",
+          colour, 0.45, crop, unit, "district", ref));
+      }
+
+      // the state line, indexed to the crop's own Telangana average
+      var idx = series.stateLine.map(function (s) {
+        return { season: s.season, index: ref ? 100 * s.y / ref : null, y: s.y, n: s.n };
+      });
+      traces.push({
+        x: idx.map(function (p) { return p.season; }),
+        y: idx.map(function (p) { return p.index; }),
+        type: "scatter",
+        mode: "lines+markers",
+        line: { color: colour, width: 2.2 },
+        marker: { color: colour, size: 5 },
+        name: cropTitle(crop),
+        customdata: idx.map(function (p) {
+          return [crop, p.season, p.index, p.y, unit, p.n];
+        }),
+        hovertemplate:
+          cropTitle(crop) + " · %{customdata[1]}<br>" +
+          "state yield/area %{customdata[3]:.3f} " + "%{customdata[4]}" +
+          "<br>index %{customdata[2]:.1f} (Telangana average = 100)" +
+          "<br>%{customdata[5]} districts reporting<extra></extra>"
+      });
+
+      idx.forEach(function (p) {
+        if (p.index !== null) scaleVals.push(p.index);
+      });
+
+      // the 2026 prediction: a DASHED segment from the last observed season
+      // to the area-weighted state figure, with the point estimate marked as
+      // a diamond.  The dashed segment is the forecast; the solid line before
+      // it is history.
+      var last = idx[idx.length - 1];
+      var endIndex = ref ? 100 * st.yield_2026_per_ha / ref : null;
+      if (last && endIndex !== null) {
+        scaleVals.push(endIndex);
+        traces.push({
+          x: [last.season, "2026"],
+          y: [last.index, endIndex],
+          type: "scatter",
+          mode: "lines",
+          line: { color: colour, width: 2.2, dash: "dash" },
+          name: cropTitle(crop) + " — 2026 prediction",
+          showlegend: false,
+          hoverinfo: "skip"
+        });
+        traces.push({
+          x: ["2026"],
+          y: [endIndex],
+          type: "scatter",
+          mode: "markers",
+          marker: {
+            color: colour, size: 11, symbol: "diamond",
+            line: { color: "#fffdf9", width: 2 }
+          },
+          name: cropTitle(crop) + " — 2026 predicted yield/area",
+          showlegend: false,
+          customdata: [[crop, endIndex, st.yield_2026_per_ha, unit]],
+          hovertemplate:
+            cropTitle(crop) + " · 2026 predicted yield/area " +
+            "%{customdata[2]:.3f} " + "%{customdata[3]}" +
+            "<br>index %{customdata[1]:.1f}<extra></extra>"
+        });
+      }
+    });
+
+    function pointTrace(list, name, fill, opacity, crop, unit, kind, ref) {
+      return {
+        x: list.map(function (p) { return p.season; }),
+        // the points are indexed too: the axis is an index, so a raw yield
+        // would be plotted at the wrong place entirely
+        y: list.map(function (p) {
+          return (p.y === null || p.y === undefined || !ref) ? null : 100 * p.y / ref;
+        }),
+        type: "scatter",
+        mode: "markers",
+        marker: { color: fill, size: 5, opacity: opacity },
+        name: name,
+        showlegend: false,
+        customdata: list.map(function (p) {
+          return [kind, crop, p.slug, p.label, p.season, p.y, p.rain, p.dry, p.heat, p.area];
+        }),
+        hovertemplate:
+          "%{customdata[3]} · %{customdata[4]}<br>" +
+          "yield %{customdata[5]:.2f} " + unit + "<br>" +
+          "rainfall %{customdata[6]:.0f} mm<br>" +
+          "longest dry run %{customdata[7]:.0f} d · heat days %{customdata[8]:.0f}" +
+          "<extra></extra>"
+      };
+    }
+
+    // THE Y RANGE.  It is set from the state lines and the 2026 predictions,
+    // and - when a single crop is on the chart - from the BULK of the
+    // district observations, taken as the 2nd to 98th percentile.
+    //
+    // A percentile, not the extremes: one delivered observation (arhar,
+    // Mulugu 2019-20) is 22.85 t/ha against a district norm of 0.62-0.91,
+    // and letting it set the axis would flatten the whole chart to a line.
+    // It is still a delivered value, so it is not deleted - it is reported in
+    // the foot, and it is in the forecast table.
+    var yLo = Math.min.apply(null, scaleVals);
+    var yHi = Math.max.apply(null, scaleVals);
+    if (pointVals.length) {
+      var sortedPoints = pointVals.slice().sort(function (a, b) { return a - b; });
+      yLo = Math.min(yLo, sortedPoints[Math.floor(sortedPoints.length * 0.02)]);
+      yHi = Math.max(yHi, sortedPoints[Math.floor(sortedPoints.length * 0.98)]);
+    }
+    var yPad = (yHi - yLo) * 0.08 || 2;
+    var yRange = [Math.max(0, yLo - yPad), yHi + yPad];
+
+    // count the district observations that fall outside the plotted range, so
+    // the reader is told rather than left to wonder where a point went
+    var offScale = pointVals.filter(function (v) {
+      return v < yRange[0] || v > yRange[1];
+    }).length;
+
+    var shapes = [
+      {
+        type: "line",
+        x0: -0.5, x1: xAxis.length - 0.5, y0: 100, y1: 100,
+        yref: "y", xref: "x",
+        line: { color: "#b3ab9b", width: 1, dash: "dot" }
+      }
+    ];
+    if (boundaryAt >= 0) {
+      shapes.push({
+        type: "line",
+        x0: boundaryAt, x1: boundaryAt, y0: 0, y1: 1, yref: "paper",
+        line: { color: "#b3ab9b", width: 1, dash: "dot" }
+      });
+    }
+
+    var annotations = [
+      {
+        x: -0.4, y: 100,
+        xref: "x", yref: "y",
+        xanchor: "left", yanchor: "bottom",
+        text: "Telangana average = 100",
+        showarrow: false,
+        font: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
+      }
+    ];
+
+    Plotly.react(el, traces, {
+      margin: { l: 54, r: 18, t: 10, b: 46 },
+      paper_bgcolor: "rgba(0,0,0,0)",
+      plot_bgcolor: "rgba(0,0,0,0)",
+      font: { family: "IBM Plex Sans, sans-serif", size: 10, color: "#454b55" },
+      shapes: shapes,
+      annotations: annotations,
+      showlegend: false,
+      hovermode: "closest",
+      xaxis: {
+        type: "category",
+        categoryorder: "array",
+        categoryarray: xAxis,
+        tickangle: -45,
+        gridcolor: "#e6e2d8",
+        linecolor: "#d9d4c8",
+        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
+      },
+      yaxis: {
+        title: {
+          text: "state yield per hectare, indexed (Telangana average = 100)",
+          font: { size: 10 }
+        },
+        range: yRange,
+        gridcolor: "#e6e2d8",
+        zeroline: false,
+        tickfont: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
+      }
+    }, PLOT_CONFIG);
+
+    // clicking a district point reads that district-season in the panel
+    // below; clicking the 2026 diamond reads the crop's forecast
+    el.on("plotly_click", function (ev) {
+      var cd = ev && ev.points && ev.points[0] && ev.points[0].customdata;
+      if (!cd || !cd.length) return;
+      if (cd[0] === "pre" || cd[0] === "district") {
+        showForecastPoint(cd[1], cd[2]);
+      } else {
+        showForecastCrop(cd[0]);
+      }
+    });
+
+    els.forecastOffScale = offScale;
+  }
+
+  function renderForecastLegend() {
+    var box = els.forecastLegend;
+    if (!box) return;
+    var crops = tickedCrops();
+    var items = [];
+
+    // the district observations are drawn only when the chart is focused on
+    // one crop, so the legend does not claim marks that are not on screen
+    if (crops.length === 1) {
+      items.push(
+        '<span class="forecast-legend__item"><span class="forecast-legend__swatch" style="background:#9aa1ab"></span>' +
+        '9 undivided parent districts (2014-15, 2015-16)</span>'
+      );
+      items.push(
+        '<span class="forecast-legend__item"><span class="forecast-legend__swatch forecast-legend__swatch--crop"></span>' +
+        '32 post-reorganisation districts</span>'
+      );
+    }
+    items.push(
+      '<span class="forecast-legend__item"><span class="forecast-legend__line"></span>' +
+      'state yield per hectare (area-weighted)</span>'
+    );
+    items.push(
+      '<span class="forecast-legend__item"><span class="forecast-legend__dot"></span>' +
+      'Telangana average = 100</span>'
+    );
+    items.push(
+      '<span class="forecast-legend__item"><span class="forecast-legend__dash"></span>' +
+      '2026 prediction (2022-23 area baseline)</span>'
+    );
+    items.push(
+      '<span class="forecast-legend__item"><span class="forecast-legend__diamond"></span>' +
+      '2026 predicted yield/area</span>'
+    );
+
+    var names = crops.map(function (c) { return cropTitle(c); }).join(", ");
+    box.innerHTML =
+      '<span class="forecast-legend__item forecast-legend__item--head">On the chart: ' +
+      esc(names) + '</span>' + items.join("");
+  }
+
+  function renderForecastFoot() {
+    var meta = D.forecast_meta || {};
+    var crops = tickedCrops();
+    var parts = [];
+
+    parts.push(
+      "Every crop is indexed to its own Telangana average over the fitted period " +
+      "(2016-17 → 2022-23 = 100), so cotton in bales per hectare and the other " +
+      "crops in tonnes per hectare can share one axis. The state line is " +
+      "area-weighted — sum of area × yield ÷ sum of area over the districts " +
+      "reporting in that season — not the unweighted mean of district yields."
+    );
+
+    parts.push(
+      "The 2026 segment is a prediction from that crop's own model, not an " +
+      "observation, and it is drawn dashed because nothing has been observed " +
+      "for it. " +
+      (meta.area_baseline_note || "")
+    );
+
+    var skills = crops.map(function (c) {
+      var f = (D.forecast || {})[c];
+      if (!f) return null;
+      return cropTitle(c) + " " + (f.skill_rmse > 0 ? "+" : "") +
+        f.skill_rmse.toFixed(3);
+    }).filter(Boolean);
+    if (skills.length) {
+      parts.push(
+        "Out-of-sample skill against the district-median baseline: " +
+        skills.join(" · ") + ". A negative skill means the model does not beat " +
+        "the baseline, so its prediction is read as no evidence of a change " +
+        "rather than as a forecast."
+      );
+    }
+
+    if (els.forecastOffScale) {
+      parts.push(
+        els.forecastOffScale + " district observation(s) fall outside the plotted " +
+        "range and are not drawn. The scale is set by the state line, the 2026 " +
+        "prediction and the 2nd-to-98th percentile of the district observations, " +
+        "so that one delivered value cannot flatten the chart; every observation " +
+        "is in the table below."
+      );
+    }
+
+    els.forecastFoot.textContent = parts.join(" ");
+  }
+
+  /* ---------------------------------------------------------------------- *
+   * The 2026 forecast table: every district against the state-wide mean
    * ---------------------------------------------------------------------- */
+  function renderForecastTable() {
+    var crop = state.crop;
+    var f = (D.forecast || {})[crop];
+    if (!f) {
+      els.forecastTableBody.innerHTML = "";
+      els.forecastTableSubtitle.textContent = "—";
+      return;
+    }
+    var unit = f.unit;
+    var rows = f.per_district.map(function (r) {
+      return {
+        label: r.label,
+        slug: r.slug,
+        pred: r.predicted_2026,
+        state: f.state.reference_yield_per_ha,
+        diff: r.pct_vs_state,
+        rain: r.rain_2026_mm
+      };
+    });
+
+    var key = state.forecastSort.key;
+    var dir = state.forecastSort.dir;
+    rows.sort(function (a, b) {
+      var x = a[key], y = b[key];
+      if (typeof x === "string") return x.localeCompare(y) * dir;
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
+      return ((x || 0) - (y || 0)) * dir;
+    });
+
+    var cols = [
+      { key: "label", title: "District" },
+      { key: "pred", title: "2026 predicted", num: true },
+      { key: "state", title: "State mean", num: true },
+      { key: "diff", title: "Difference", num: true },
+      { key: "rain", title: "2026 rainfall (mm)", num: true }
+    ];
+    var head = document.querySelector("#forecastTable thead tr");
+    head.innerHTML = cols.map(function (c) {
+      var aria = state.forecastSort.key === c.key
+        ? ' aria-sort="' + (dir === 1 ? "ascending" : "descending") + '"' : "";
+      return "<th scope='col' data-sort='" + c.key + "'" + aria +
+        (c.num ? " class='num'" : "") + ">" + esc(c.title) + "</th>";
+    }).join("");
+
+    els.forecastTableBody.innerHTML = rows.map(function (r) {
+      var diff = r.diff;
+      var cls = "diff-cell";
+      if (diff === null || diff === undefined) cls += " diff-cell--flat";
+      else if (diff < 0) cls += " diff-cell--down";
+      else if (diff > 0) cls += " diff-cell--up";
+      else cls += " diff-cell--flat";
+      var diffTxt = (diff === null || diff === undefined)
+        ? "—"
+        : (diff > 0 ? "+" : "") + diff.toFixed(1) + "%";
+      return (
+        "<tr data-slug='" + r.slug + "' tabindex='0'>" +
+          "<td>" + esc(r.label) + "</td>" +
+          "<td class='num'>" + fmt(r.pred, 2) + "</td>" +
+          "<td class='num'>" + fmt(r.state, 2) + "</td>" +
+          "<td class='num " + cls + "'>" + diffTxt + "</td>" +
+          "<td class='num'>" + fmt(r.rain, 0) + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+
+    Array.prototype.forEach.call(
+      els.forecastTableBody.querySelectorAll("tr[data-slug]"),
+      function (tr) {
+        tr.addEventListener("click", function () {
+          showForecastPoint(state.crop, tr.getAttribute("data-slug"));
+        });
+      }
+    );
+    Array.prototype.forEach.call(
+      head.querySelectorAll("th[data-sort]"),
+      function (th) {
+        th.addEventListener("click", function () {
+          var k = th.getAttribute("data-sort");
+          if (state.forecastSort.key === k) {
+            state.forecastSort.dir = -state.forecastSort.dir;
+          } else {
+            state.forecastSort.key = k;
+            state.forecastSort.dir = 1;
+          }
+          renderForecastTable();
+        });
+      }
+    );
+
+    els.forecastTableSubtitle.textContent =
+      "2026-27 · " + rows.length + " districts · " + unit;
+
+    // the Mulugu footnote: a delivered data value that is retained as-is and
+    // is visible in the table, so the reader can see why
+    var mulugu = f.per_district.filter(function (r) {
+      return r.slug === "mulugu" && unit === "t/ha";
+    })[0];
+    var extra = "";
+    if (mulugu && mulugu.pct_vs_state !== null && mulugu.pct_vs_state > 200) {
+      extra =
+        " Mulugu's arhar record includes a 2019-20 cell reading 891 t on 39 ha " +
+        "(22.85 t/ha against the district's 0.62–0.91 in other years). It is " +
+        "retained exactly as delivered, and it inflates Mulugu's own mean and " +
+        "therefore its 2026 prediction.";
+    }
+    els.forecastTableFoot.textContent =
+      "Each district's predicted 2026 yield/area against the state-wide mean " +
+      "yield/area for " + cropTitle(crop) + " — the area-weighted state figure " +
+      "(sum of production ÷ sum of area over 2016-17 – 2022-23), not the " +
+      "unweighted mean of district yields. Vermillion is below the state mean, " +
+      "bluish-green is above, and the sign is always printed, so the colour is " +
+      "never the only channel." + extra;
+  }
+
+  /* ---------------------------------------------------------------------- *
+   * The point description: click a point, read that district-season
+   * ---------------------------------------------------------------------- */
+  function showForecastPoint(crop, slug) {
+    var f = (D.forecast || {})[crop];
+    if (!f) return;
+    var row = f.per_district.filter(function (r) { return r.slug === slug; })[0];
+    if (!row) return;
+    state.forecastPoint = { crop: crop, slug: slug };
+
+    els.forecastDetailEmpty.hidden = true;
+    els.forecastDetailBody.hidden = false;
+
+    // the district's own observed history, so the point can be read against
+    // that district's own norm rather than the state's
+    var own = [];
+    var bySeason = D.panel[crop] || {};
+    Object.keys(bySeason).forEach(function (season) {
+      var rows = bySeason[season];
+      D.districts.forEach(function (d, i) {
+        if (d.s !== slug) return;
+        var v = rows[i];
+        if (v && v[0] !== null) own.push({ season: season, y: v[0], rain: v[2] });
+      });
+    });
+    var ownMedian = null;
+    if (own.length) {
+      var s = own.map(function (o) { return o.y; }).sort(function (a, b) { return a - b; });
+      var m = Math.floor(s.length / 2);
+      ownMedian = s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    }
+
+    var fields = [
+      ["Crop · season", cropTitle(crop) + " · 2026-27"],
+      ["District", row.label],
+      ["2026 predicted yield/area",
+        row.predicted_2026 + " " + f.unit],
+      ["Area baseline",
+        "2022-23 kharif area (" + fmt(row.area_2022_23_ha, 0) + " ha)"],
+      ["State average yield/area", fmt(f.state.reference_yield_per_ha, 3) + " " + f.unit],
+      ["Difference vs state",
+        (row.pct_vs_state > 0 ? "+" : "") + row.pct_vs_state + "%"],
+      ["2026 kharif rainfall", fmt(row.rain_2026_mm, 0) + " mm"],
+      ["Longest dry run", row.dry_run_max + " d"],
+      ["Heat days", row.heat_days + " d"],
+      ["This district's own mean yield",
+        ownMedian === null ? "—" : fmt(ownMedian, 3) + " " + f.unit],
+      ["Model out-of-sample skill",
+        (f.skill_rmse > 0 ? "+" : "") + f.skill_rmse.toFixed(3) +
+        (f.skill_rmse > 0 ? " (beats the median baseline)" : " (does not beat the median baseline)")]
+    ];
+    els.forecastDetailBody.innerHTML = fields.map(function (fld) {
+      return "<div><dt>" + esc(fld[0]) + "</dt><dd>" + esc(String(fld[1])) + "</dd></div>";
+    }).join("");
+  }
+
+  // the crop-level reading: click the 2026 diamond
+  function showForecastCrop(crop) {
+    var f = (D.forecast || {})[crop];
+    if (!f) return;
+    var st = f.state;
+    state.forecastPoint = { crop: crop, slug: null };
+
+    els.forecastDetailEmpty.hidden = true;
+    els.forecastDetailBody.hidden = false;
+
+    var rejected = (f.rejected_specs || []).length
+      ? " The best-scoring specification was rejected for this crop: it returns " +
+        "non-positive yields at 2026's rainfall, so a valid one is used instead."
+      : "";
+
+    var fields = [
+      ["Crop · season", cropTitle(crop) + " · 2026-27"],
+      ["2026 predicted yield/area",
+        fmt(st.yield_2026_per_ha, 3) + " " + f.unit],
+      ["Telangana average yield/area",
+        fmt(st.reference_yield_per_ha, 3) + " " + f.unit],
+      ["Difference vs the average",
+        (st.diff_per_ha > 0 ? "+" : "") + fmt(st.diff_per_ha, 3) + " " + f.unit +
+        "  (" + (st.pct_vs_reference > 0 ? "+" : "") + st.pct_vs_reference + "%)"],
+      ["2026 total on the area baseline",
+        fmt(st.total_2026, 0) + (st.total_unit_note ? " " + st.total_unit_note : "")],
+      ["Area baseline", "2022-23 kharif area"],
+      ["Model specification", f.selected_spec],
+      ["Model out-of-sample skill",
+        (f.skill_rmse > 0 ? "+" : "") + f.skill_rmse.toFixed(3) +
+        (f.skill_rmse > 0
+          ? " (beats the district-median baseline)"
+          : " (does not beat the district-median baseline)") +
+        rejected],
+      ["2026 state-mean rainfall",
+        fmt((D.marker || {}).state_mean, 0) + " mm — the " +
+        fmt((D.marker || {}).percentile_in_history, 1) +
+        "th percentile of the fitted range"]
+    ];
+
+    els.forecastDetailBody.innerHTML = fields.map(function (fld) {
+      return "<div><dt>" + esc(fld[0]) + "</dt><dd>" + esc(String(fld[1])) + "</dd></div>";
+    }).join("");
+  }
+
+
   function exportCsv() {
     var rows = tableRows();
     var head = [
@@ -1243,23 +1571,8 @@
     styleAll();
     renderLegend();
     renderReadout();
-    renderCurve();
-    renderTable();
     renderWindowPanel();
-
-    var m = modelFor(state.crop);
-    if (isModelled(state.crop)) {
-      var s1 = m.stage1;
-      els.curveNote.textContent =
-        "District and year fixed effects; the curve is the mean-centred effect of rainfall, " +
-        "with every other factor held at its average. " +
-        (s1.vertex_reported
-          ? "The rainfall optimum R* = " + fmt(s1.vertex_mm, 0) + " mm is statistically supported for this crop."
-          : "No rainfall optimum is statistically supported for this crop: the quadratic term is not significant.");
-    } else {
-      els.curveNote.textContent =
-        "This crop is mapped and described but not modelled — the response curve is not fitted for it.";
-    }
+    renderForecast();
 
     els.mapNote.textContent =
       state.season + " · " + cropTitle(state.crop) + " · " +
@@ -1278,18 +1591,13 @@
           fmt(D.marker.historical_min, 0) + "–" + fmt(D.marker.historical_max, 0) +
           " mm range observed in the fitting period; " +
           D.marker.districts_below_historical_min + " of " + D.marker.n_districts +
-          " districts sit below that observed minimum, so the reading is an " +
+          " districts sit below that observed minimum, so the prediction is an " +
           "extrapolation below the fitted range, not an interpolation.";
       }
       els.markerDisclaimer.textContent = META.disclosures.not_forecast + extra;
     } else {
       els.markerDisclaimer.hidden = true;
     }
-
-    els.curveFoot.textContent =
-      "Points are district-season observations. The band in the season panels is the p10–p90 " +
-      "range across districts — descriptive, not inferential; no confidence intervals are claimed. " +
-      "Rainfall is 1 Jun – 30 Sep, the official kharif sowing window, not the full growing season.";
   }
 
   /* ---------------------------------------------------------------------- *
@@ -1319,8 +1627,10 @@
     var d = META.disclosures;
     var order = [
       d.reanalysis, d.convective, d.confound, d.aggregates, d.boundary, d.sowing,
-      d.agency, d.cotton, d.sample, d.not_forecast, d.attribution, d.percentiles
-    ];
+      d.agency, d.cotton, d.sample, d.not_forecast,
+      d.forecast_method, d.forecast_area, d.forecast_specimens,
+      d.attribution, d.percentiles
+    ].filter(function (t) { return !!t; });
     els.disclosures.innerHTML = order.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("");
     els.colophon.textContent =
       "DATA_VERSION " + META.data_version + " · panel built " + META.panel_created_utc +
@@ -1355,7 +1665,29 @@
     });
     els.csv.addEventListener("click", exportCsv);
 
-    renderAll();
+    // --- font gate ---------------------------------------------------------
+    // The webfonts are self-hosted with font-display: swap, so the browser
+    // paints with a fallback face first and swaps in IBM Plex a moment
+    // later.  Plotly measures an annotation's text at render time and sizes
+    // the background box to that measurement, so a chart drawn before the
+    // real font arrives gets a box sized for the FALLBACK metrics - and the
+    // text then overflows its own box once the font swaps in.
+    //
+    // So: wait for the fonts, then render.  The timeout is a safety net so a
+    // font that never arrives still produces a page, and a second pass
+    // re-renders if the fonts settle after the first draw.
+    var fontsReady = (document.fonts && document.fonts.ready)
+      ? Promise.race([
+          document.fonts.ready,
+          new Promise(function (resolve) { setTimeout(resolve, 1500); })
+        ])
+      : Promise.resolve();
+    fontsReady.then(function () {
+      renderAll();
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () { renderAll(); });
+      }
+    });
   }
 
   if (document.readyState === "loading") {

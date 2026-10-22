@@ -80,6 +80,14 @@ def main() -> None:
     # crop scope is the four target crops, in the canonical order
     crops = [c for c in cfg.TARGET_CROPS if c in primary["crop"].unique()]
 
+    # The forecast charts need the full 9-season record, not just the primary
+    # panel: 2014-15 and 2015-16 are 9 undivided parent districts and 2016-17
+    # onward are the 32 post-reorganisation districts.  The two blocks are kept
+    # separate in the payload and marked with an era flag per row, so the
+    # dashboard can draw the boundary break rather than hide it.
+    all_seasons = sorted(panel["season"].unique().tolist())
+    pre_seasons = [s for s in all_seasons if s < cfg.PRIMARY_PANEL_START]
+
     # per-district median kharif rainfall over the primary panel, used as the
     # reference for the rainfall-deficit map metric (each district vs its own norm)
     rain_ref = (
@@ -143,6 +151,8 @@ def main() -> None:
                             int(r["heat_days"]),
                             round_or_none(r["vpd_mean"], 2),
                             int(r["rain_days"]),
+                            round_or_none(r["area_ha"], 1),
+                            round_or_none(r["production"], 1),
                         ]
                     )
                 else:
@@ -160,6 +170,62 @@ def main() -> None:
                 ]
         panel_data[crop] = per_season
         series[crop] = crop_series
+
+    # -- extended panel: the two pre-2016 seasons -----------------------------
+    # 9 undivided parent districts, era-tagged.  Shipped so the forecast
+    # charts can show 2014-15 -> 2022-23 with the 2016 boundary marked
+    # rather than silently truncating the record.
+    extended: dict = {}
+    for crop in crops:
+        d = panel[(panel["crop"] == crop) & (panel["season"].isin(pre_seasons))]
+        if d.empty:
+            continue
+        per: dict = {}
+        for season in pre_seasons:
+            sub = d[d["season"] == season]
+            if sub.empty:
+                continue
+            per[season] = [
+                {
+                    "s": r["district_slug"],
+                    "l": str(r["district_label"]),
+                    "y": round_or_none(r["yield"], 3),
+                    "a": round_or_none(r["area_ha"], 1),
+                    "r": round_or_none(r["rain_mm"], 1),
+                    "d": int(r["dry_run_max"]),
+                    "h": int(r["heat_days"]),
+                }
+                for _, r in sub.iterrows()
+            ]
+        extended[crop] = per
+
+    # -- the 2026 forecast ----------------------------------------------------
+    forecast: dict = {}
+    forecast_meta: dict = {}
+    forecast_path = cfg.PROCESSED / "forecast_series.json"
+    if forecast_path.exists():
+        fs = cfg.read_json(forecast_path)
+        forecast_meta = {
+            "area_baseline_season": fs["area_baseline_season"],
+            "area_baseline_note": fs["area_baseline_note"],
+            "measure": fs["measure"],
+            "aggregation": fs["aggregation"],
+        }
+        for crop, res in fs["crops"].items():
+            forecast[crop] = {
+                "unit": res["unit"],
+                "selected_spec": res["selected_spec"],
+                "spec_yield_form": res["spec_yield_form"],
+                "skill_rmse": res["skill_rmse"],
+                "beats_baseline": res["beats_baseline"],
+                "r2": res["r2"],
+                "b_rain_per_mm": res["b_rain_per_mm"],
+                "rejected_specs": res["rejected_specs"],
+                "per_district": res["per_district"],
+                "state": res["state"],
+                "n_districts": res["n_districts"],
+                "n_negative_predicted": res["n_negative_predicted"],
+            }
 
     # -- models ---------------------------------------------------------------
     models: dict = {}
@@ -313,6 +379,26 @@ def main() -> None:
                 "Small sample per crop: ~220 district-year observations per crop in the primary panel."
             ),
             "not_forecast": cfg.DISCLOSURE_2026,
+            "forecast_method": (
+                "2026 is a model prediction, not an observation and not a validated forecast. "
+                "Each crop is forecast by its own specification, selected by leave-one-season-out "
+                "cross-validation inside the fitting period, and each chart carries that model's "
+                "out-of-sample skill score against a district-median baseline. Two of the four "
+                "models do not beat that baseline, so their predictions should be read as "
+                "'no evidence of a change', not as a forecast."
+            ),
+            "forecast_area": (
+                "2026 planted area does not exist and cannot be forecast. The state-level 2026 "
+                "figures are area-weighted using each district's 2022-23 kharif area as the "
+                "baseline, applied identically to the 2026 prediction and to the state average, "
+                "so the comparison isolates yield from land utilisation. Yield per hectare is "
+                "the measure; production totals are the same forecast rescaled by area."
+            ),
+            "forecast_specimens": (
+                "The 2026 predictions are per-district point estimates read off a fitted curve. "
+                "No prediction interval is claimed for them: with three held-out seasons there is "
+                "not enough data to calibrate one honestly."
+            ),
             "attribution": (
                 "Attribution. ERA5 via Open-Meteo — CC BY 4.0. DES — Govt. of India open data. "
                 "District boundaries: Open Government Data / community GeoJSON (see sources)."
@@ -356,9 +442,15 @@ def main() -> None:
         "crop_colors": cfg.CROP_COLORS,
         "modelled_crops": [c for c in cfg.MODELLED_CROPS if c in crops],
         "seasons": seasons,
+        "all_seasons": all_seasons,
+        "pre_seasons": pre_seasons,
+        "primary_panel_start": cfg.PRIMARY_PANEL_START,
         "districts": districts,
         "panel": panel_data,
         "series": series,
+        "extended": extended,
+        "forecast": forecast,
+        "forecast_meta": forecast_meta,
         "models": models,
         "domains": {**domains, "deficit": [-deficit_lim, deficit_lim]},
         "marker": marker,
