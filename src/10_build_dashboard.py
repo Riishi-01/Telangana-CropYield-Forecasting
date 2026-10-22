@@ -223,6 +223,7 @@ def main() -> None:
                 "rejected_specs": res["rejected_specs"],
                 "per_district": res["per_district"],
                 "state": res["state"],
+                "rain": res.get("rain", {}),
                 "n_districts": res["n_districts"],
                 "n_negative_predicted": res["n_negative_predicted"],
             }

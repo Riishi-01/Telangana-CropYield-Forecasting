@@ -1487,12 +1487,27 @@
       var unitLabel = isBales ? "M bales" : "M t";
       var pct = st.pct_vs_reference;
       var cls = pct < 0 ? "diff-cell--down" : (pct > 0 ? "diff-cell--up" : "diff-cell--flat");
+      // the rainfall over THIS crop's own area, which is not the state
+      // figure: each crop is grown on a different area
+      var rn = f.rain || {};
+      var rpct = rn.pct_vs_average;
+      var rcls = rpct === null || rpct === undefined
+        ? "diff-cell--flat"
+        : (rpct < 0 ? "diff-cell--down" : "diff-cell--up");
       return {
         label: cropTitle(crop),
         value: millions(st.total_2026) + " " + unitLabel,
         avg: millions(st.reference_total_same_area) + " " + unitLabel,
         delta: (pct > 0 ? "\u2191" : pct < 0 ? "\u2193" : "") + Math.abs(pct).toFixed(1) + "%",
-        cls: cls
+        cls: cls,
+        rain2026: rn.mm_2026 === undefined || rn.mm_2026 === null
+          ? "\u2014" : fmt(rn.mm_2026, 0) + " mm",
+        rainavg: rn.mm_average === undefined || rn.mm_average === null
+          ? "\u2014" : fmt(rn.mm_average, 0) + " mm",
+        rainDelta: rpct === null || rpct === undefined
+          ? ""
+          : (rpct > 0 ? "\u2191" : "\u2193") + Math.abs(rpct).toFixed(1) + "%",
+        rainCls: rcls
       };
     });
 
@@ -1500,20 +1515,33 @@
     // average over the nine observed seasons
     var rs = D.rain_state || null;
     var mk = D.marker || null;
+    var base = null;
+    var now = null;
     if (rs && mk && mk.available) {
-      var base = rs.avg_9season;
-      var now = mk.state_mean;
+      base = rs.avg_9season;
+      now = mk.state_mean;
       var pctR = 100.0 * (now / base - 1.0);
       rows.push({
-        label: "Kharif rainfall",
+        label: "Kharif rainfall (state)",
         value: fmt(now, 0) + " mm",
         avg: fmt(base, 0) + " mm",
         delta: (pctR > 0 ? "\u2191" : "\u2193") + Math.abs(pctR).toFixed(1) + "%",
-        cls: pctR < 0 ? "diff-cell--down" : "diff-cell--up"
+        cls: pctR < 0 ? "diff-cell--down" : "diff-cell--up",
+        rain2026: undefined,
+        rainavg: undefined
       });
     }
 
     body.innerHTML = rows.map(function (r) {
+      var rainCells = r.rain2026 === undefined
+        ? "<td class='num'>\u2014</td><td class='num'>\u2014</td>"
+        : "<td class='num'>" + esc(r.rain2026) +
+            (r.rainDelta
+              ? "<span class='state-summary__delta " + r.rainCls + "'>" +
+                esc(r.rainDelta) + "</span>"
+              : "") +
+          "</td>" +
+          "<td class='num'>" + esc(r.rainavg) + "</td>";
       return (
         "<tr>" +
           "<th scope='row' class='state-summary__crop'>" + esc(r.label) + "</th>" +
@@ -1521,6 +1549,7 @@
             "<span class='state-summary__delta " + r.cls + "'>" + esc(r.delta) + "</span>" +
           "</td>" +
           "<td class='num'>" + esc(r.avg) + "</td>" +
+          rainCells +
         "</tr>"
       );
     }).join("");
@@ -1529,9 +1558,13 @@
       "Totals are for the whole state: the 2026 prediction is the area-weighted " +
       "yield per hectare applied to each district's 2022-23 kharif area, and the " +
       "average is the Telangana average on that same area, so the two columns " +
-      "differ only by the model's skill. Rainfall is the state mean; the average " +
-      "is the mean of the nine seasonal state means, 2014-15 to 2022-23 (" +
-      fmt(rs ? rs.avg_9season : 0, 0) + " mm).";
+      "differ only by the model's skill. The rainfall columns are the kharif " +
+      "rainfall over that crop's OWN area — each crop is grown on a different " +
+      "area, so the state figure would say nothing beside a crop — with the " +
+      "average taken over 2014-15 to 2022-23. The last row is the state-wide " +
+      "figure: " + fmt(now, 0) + " mm against a nine-season state mean of " +
+      fmt(rs ? rs.avg_9season : 0, 0) + " mm, the driest kharif season in the " +
+      "record.";
   }
 
   function renderForecastTable() {

@@ -744,7 +744,7 @@ main {
 
 .state-summary__table {
   width: 100%;
-  max-width: 46rem;
+  max-width: 60rem;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
