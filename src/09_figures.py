@@ -120,6 +120,15 @@ def figure_f1(panel, summary, marker):
                 label="district-season observations",
             )
 
+            # x limits: the 2026 band is shown even when it falls outside the
+            # fitted range, so the reader can see how far outside it sits
+            x_lo = float(d["rain_mm"].min())
+            x_hi = float(d["rain_mm"].max())
+            if marker_mean is not None:
+                x_lo = min(x_lo, marker_mean[0])
+                x_hi = max(x_hi, marker_mean[1])
+            ax.set_xlim(x_lo, x_hi)
+
             # The curve is the MEAN-CENTRED partial effect of rainfall:
             #   y(R) = mean(yhat) + b1*(R - Rbar) + b2*(R^2 - R2bar)
             # i.e. the average fitted yield with the district and season
@@ -171,8 +180,8 @@ def figure_f1(panel, summary, marker):
             else:
                 reason = coef.get("vertex_reason", "quadratic term not significant")
                 ax.text(
-                    0.03, 0.96, f"no significant inverted-U\n({reason})",
-                    transform=ax.transAxes, va="top", ha="left", fontsize=7.5,
+                    0.985, 0.96, f"no significant inverted-U\n({reason})",
+                    transform=ax.transAxes, va="top", ha="right", fontsize=7.5,
                     bbox=dict(boxstyle="round,pad=0.3", fc="#fff8e1", ec="#c9a227", alpha=0.95),
                 )
 

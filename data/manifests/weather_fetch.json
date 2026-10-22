@@ -5,7 +5,7 @@
   ],
   "artifact": "weather_daily.parquet",
   "batch_size": 8,
-  "created_utc": "2026-10-22T00:28:03+00:00",
+  "created_utc": "2026-10-22T01:00:40+00:00",
   "daily_variables": [
     "precipitation_sum",
     "temperature_2m_max",
@@ -16,60 +16,18 @@
   "districts": 32,
   "fetches": [
     {
-      "bytes": 1045277,
-      "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T00:28:03+00:00",
-      "max_coordinate_deviation_deg": 0.0401,
-      "n_blocks_returned": 8,
-      "n_coordinates": 8,
-      "n_days": 3440,
-      "raw_file": "data/raw/openmeteo/era5_analysis_2014_b31f803d242b.json",
-      "sha256": "8fd305cccbc72a702b3edf418bec0fc6427ffac38302958c4d8d1d118581fc4d",
-      "start_date": "2014-06-01",
-      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=19.5831,17.6802,18.8124,17.7916,18.4999,16.0416,18.3249,18.4583&longitude=78.5417,80.7084,78.8750,79.2917,79.8749,77.8751,78.0250,79.2084&start_date=2014-06-01&end_date=2023-10-31&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,vapour_pressure_deficit_max,shortwave_radiation_sum&timezone=GMT",
-      "window": "analysis"
-    },
-    {
-      "bytes": 1045381,
-      "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T00:28:03+00:00",
-      "max_coordinate_deviation_deg": 0.0405,
-      "n_blocks_returned": 8,
-      "n_coordinates": 8,
-      "n_days": 3440,
-      "raw_file": "data/raw/openmeteo/era5_analysis_2014_2e05b7951125.json",
-      "sha256": "9cabcd715b7b956fc4c18711738510ac966251e9925dd1a7b968a66db97d36d5",
-      "start_date": "2014-06-01",
-      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=17.1748,19.3333,17.6248,16.6963,18.9999,17.9583,17.6250,18.2321&longitude=80.2750,79.3333,79.9999,77.8392,79.6250,78.2916,78.6250,80.3035&start_date=2014-06-01&end_date=2023-10-31&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,vapour_pressure_deficit_max,shortwave_radiation_sum&timezone=GMT",
-      "window": "analysis"
-    },
-    {
-      "bytes": 1045000,
-      "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T00:28:03+00:00",
-      "max_coordinate_deviation_deg": 0.032,
-      "n_blocks_returned": 8,
-      "n_coordinates": 8,
-      "n_days": 3440,
-      "raw_file": "data/raw/openmeteo/era5_analysis_2014_c5c0be285140.json",
-      "sha256": "a92e4642b023c75f0531ba737d98f622a0f3ddaf2ea5520a12d6ca0bf4ab69e1",
-      "start_date": "2014-06-01",
-      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=16.3748,16.8470,16.6248,19.1250,18.7249,18.6250,18.4583,17.1560&longitude=78.6250,79.2083,77.6250,78.3750,78.1750,79.5000,78.7084,78.4063&start_date=2014-06-01&end_date=2023-10-31&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,vapour_pressure_deficit_max,shortwave_radiation_sum&timezone=GMT",
-      "window": "analysis"
-    },
-    {
-      "bytes": 1045141,
-      "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T00:28:03+00:00",
+      "bytes": 164592,
+      "end_date": "2026-09-30",
+      "fetched_utc": "2026-10-22T01:00:40+00:00",
       "max_coordinate_deviation_deg": 0.0619,
-      "n_blocks_returned": 8,
-      "n_coordinates": 8,
-      "n_days": 3440,
-      "raw_file": "data/raw/openmeteo/era5_analysis_2014_55085020b489.json",
-      "sha256": "6712c855c4b9673416805d59d818bacab98f730b673b74d1ff119a660c45d125",
-      "start_date": "2014-06-01",
-      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=17.8123,18.0249,17.1248,17.2499,16.2916,17.8748,17.9999,17.4165&longitude=77.8751,78.8250,79.7501,77.7500,78.0417,79.7083,79.5001,79.0416&start_date=2014-06-01&end_date=2023-10-31&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,vapour_pressure_deficit_max,shortwave_radiation_sum&timezone=GMT",
-      "window": "analysis"
+      "n_blocks_returned": 32,
+      "n_coordinates": 32,
+      "n_days": 122,
+      "raw_file": "data/raw/openmeteo/era5_marker2026_2026_945117216b9f.json",
+      "sha256": "d39aa9b03b41dd2ec580c9f470a5cbcd9ebbd58be27078259b6b307d8329c700",
+      "start_date": "2026-06-01",
+      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=19.5831,17.6802,18.8124,17.7916,18.4999,16.0416,18.3249,18.4583,17.1748,19.3333,17.6248,16.6963,18.9999,17.9583,17.6250,18.2321,16.3748,16.8470,16.6248,19.1250,18.7249,18.6250,18.4583,17.1560,17.8123,18.0249,17.1248,17.2499,16.2916,17.8748,17.9999,17.4165&longitude=78.5417,80.7084,78.8750,79.2917,79.8749,77.8751,78.0250,79.2084,80.2750,79.3333,79.9999,77.8392,79.6250,78.2916,78.6250,80.3035,78.6250,79.2083,77.6250,78.3750,78.1750,79.5000,78.7084,78.4063,77.8751,78.8250,79.7501,77.7500,78.0417,79.7083,79.5001,79.0416&start_date=2026-06-01&end_date=2026-09-30&daily=precipitation_sum,temperature_2m_max,temperature_2m_min,vapour_pressure_deficit_max,shortwave_radiation_sum&timezone=GMT",
+      "window": "marker2026"
     }
   ],
   "marker_window": [
@@ -83,10 +41,10 @@
     "tmin_c": 0.0,
     "vpd_max_kpa": 0.0
   },
-  "rows": 110080,
+  "rows": 113984,
   "rows_analysis_window": 110080,
-  "rows_marker_window": 0,
-  "sha256": "d0b63f0afc1f32b4ac6fe767bf5a4c865715eddeff0aa03e4b37c92f7d214157",
+  "rows_marker_window": 3904,
+  "sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
   "temp_window": [
     "2014-06-01",
     "2023-10-31"
