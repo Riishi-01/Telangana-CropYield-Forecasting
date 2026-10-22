@@ -55,6 +55,26 @@ function run(d, w) {
 
   setSelect("metricSelect", "yield");
   results.legendAfterMetric = txt(d.getElementById("legendScale"));
+  results.tableColsYield = d.querySelectorAll("#districtTable thead th").length;
+  results.tableHeadersYield = Array.prototype.map.call(
+    d.querySelectorAll("#districtTable thead th"), function (th) { return txt(th); }
+  );
+  setSelect("metricSelect", "anomaly");
+
+  // the rainfall-deficit metric
+  setSelect("metricSelect", "deficit");
+  results.legendAfterDeficit = txt(d.getElementById("legendScale"));
+  results.legendCaptionDeficit = txt(d.getElementById("legendCaption"));
+  results.tableHeadersDeficit = Array.prototype.map.call(
+    d.querySelectorAll("#districtTable thead th"), function (th) { return txt(th); }
+  );
+  results.deficitValues = Array.prototype.map.call(
+    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
+    function (tr) { return parseFloat(tr.children[2].textContent.replace(/[^0-9.\-]/g, "")); }
+  );
+  results.deficitAllNumeric = results.deficitValues.every(function (v) { return !isNaN(v); });
+  results.deficitMean = results.deficitValues.reduce(function (a, b) { return a + b; }, 0) /
+    (results.deficitValues.length || 1);
   setSelect("metricSelect", "anomaly");
 
   var firstRow = d.querySelector("#districtTable tbody tr[data-slug]");
@@ -90,6 +110,16 @@ function run(d, w) {
   results.statsPlot = d.querySelectorAll("#statsChart svg").length;
   results.statsBars = d.querySelectorAll("#statsChart .barlayer path").length;
   results.disclosureItems = d.querySelectorAll("#disclosureList li").length;
+
+  // the window-sensitivity panel
+  results.windowHeadCells = d.querySelectorAll("#windowTable thead th").length;
+  results.windowBodyRows = d.querySelectorAll("#windowTable tbody tr").length;
+  results.windowFoot = txt(d.getElementById("windowFoot"));
+  results.windowFirstRow = txt(d.querySelector("#windowTable tbody tr"));
+  results.cropOptions = d.getElementById("cropSelect").options.length;
+  results.cropOptionTexts = Array.prototype.map.call(
+    d.getElementById("cropSelect").options, function (o) { return o.textContent.trim(); }
+  );
 
   publish(results);
 }

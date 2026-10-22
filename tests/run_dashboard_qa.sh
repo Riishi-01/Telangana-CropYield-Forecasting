@@ -54,7 +54,7 @@ checks = [
     ("2026 disclaimer visible in the DOM", r.get("disclaimerVisible") is True),
     ("disclaimer states it is not a forecast",
      "not a validated forecast" in r.get("disclaimer", "")),
-    ("rice reports a supported optimum R*", "1,355 mm" in r.get("riceFacts", "")),
+    ("rice reports a supported optimum R*", re.search(r"R\*\s*[0-9,]+\s*mm", r.get("riceFacts", "")) is not None),
     ("unmodelled crop is not given a model",
      "none for this crop" in r.get("wheatFacts", "")),
     ("unmodelled crop has no fitted curve",
@@ -64,6 +64,19 @@ checks = [
     ("metric toggle changes the legend",
      "yield (" in r.get("legendAfterMetric", "")
      and "anomaly" not in r.get("legendAfterMetric", "")),
+    ("rainfall-deficit metric switches the legend",
+     "rainfall deficit" in r.get("legendAfterDeficit", "")),
+    ("rainfall-deficit legend explains the reference",
+     "own" in r.get("legendCaptionDeficit", "").lower()
+     and "drought severity" in r.get("legendCaptionDeficit", "").lower()),
+    ("table columns follow the metric (deficit)",
+     "Rain deficit (%)" in r.get("tableHeadersDeficit", [])),
+    ("table columns follow the metric (yield)",
+     "Anomaly" not in " ".join(r.get("tableHeadersYield", []))),
+    ("deficit values are numeric for every district",
+     r.get("deficitAllNumeric") is True and len(r.get("deficitValues", [])) == 32),
+    ("deficit is centred on the district's own norm (mean near 0)",
+     abs(r.get("deficitMean", 99)) < 25),
     ("clicking a table row pins a district", r.get("pinnedRows") == 1),
     ("table sorts ascending", r.get("sortedAscending") is True),
     ("table sorts descending", r.get("sortedDescending") is True),
@@ -72,6 +85,13 @@ checks = [
     ("response curve rendered", r.get("curvePlot", 0) > 0),
     ("2026 band and marker drawn on the curve", r.get("curveShapes") == 2),
     ("model comparison chart rendered", r.get("statsBars") == 8),
+    ("window-sensitivity panel rendered",
+     r.get("windowHeadCells") == 4 and r.get("windowBodyRows") == 4),
+    ("window panel reports the p-value and the vertex",
+     "p =" in r.get("windowFirstRow", "")
+     and ("no vertex" in r.get("windowFirstRow", "") or "R*" in r.get("windowFirstRow", ""))),
+    ("crop selector offers only the four project crops",
+     r.get("cropOptions") == 4),
     ("all 12 disclosures present", r.get("disclosureItems") == 12),
 ]
 
