@@ -367,7 +367,7 @@ One further detail: the Stage 2 arhar model *does* carry a significant quadratic
 (p = 0.026, R\* = 1,083 mm) once the dry-spell and heat terms are in the model, which
 Stage 1 does not. That is a specification-dependent result and is reported as such.
 
-### Does the weather model earn its place?
+### Can rainfall predict a district's kharif yield?
 
 Chronological split: train 2016-17 … 2019-20, test 2020-21 … 2022-23. Baseline is the
 district-crop median yield computed on the train period only.
@@ -580,17 +580,19 @@ season's rainfall against that district's own 2016-17–2022-23 median, so the m
 where a season was dry *for that district* rather than for the state).
 
 The report reads in one direction: the map and the season readout establish what was
-observed; the forecast chart then states what the model predicts for 2026 and how well
-that model has performed out of sample; and "Does the weather model earn its place?"
-puts the model's value against the alternatives.
+observed; the forecast chart then states what the model predicts for 2026; and the state
+summary puts that forecast against the Telangana average. The model behind the numbers
+is named in the readout panel, which follows the crop selector.
 
 **What the page does not carry, and where it lives instead.** The per-district 2026
 numbers are on the map — as colour, as the number on each polygon, and in the hover
 card — and in the CSV export, which is the full 32-row table; they are not printed
 as a list. The fifteen mandatory disclosures and the full set of limitations are in
 §7 below and in the README of the repository, not on the page. The rainfall–yield
-response curve is reported in §5 and in F1–F3. The page leads with the forecast, and
-this report carries the caveats.
+response curve is reported in §5 and in F1–F3. The cross-crop model-comparison chart
+and the season-window sensitivity matrix were retired from the page (ERRATA C14): the
+skill table is in §5 above, and the window sensitivity is in §5 and in F5. The page
+leads with the forecast, and this report carries the caveats.
 
 ## 7. Limitations — all nineteen
 
@@ -689,8 +691,8 @@ for step in 01_ingest_des 02_build_geo 03_fetch_era5 04_features \
 done
 
 # 3. the checks
-.venv/bin/python tests/verify_readme_numbers.py   # 164 README numbers vs the artefacts
-bash tests/run_dashboard_qa.sh                     # 41 headless checks
+.venv/bin/python tests/verify_readme_numbers.py   # 316 README numbers vs the artefacts
+bash tests/run_dashboard_qa.sh                     # 60 headless checks
 ```
 
 - `src/03_fetch_era5.py` takes an optional window argument: `analysis` (default),

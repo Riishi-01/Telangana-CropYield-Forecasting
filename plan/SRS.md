@@ -329,6 +329,22 @@ reads `2026-27 (prediction) · <crop> · <metric>`, the season readout reads
 chart's foot states that the segment is a prediction and not an observation,
 and prints every crop's out-of-sample skill.
 
+**The model the page describes (ERRATA C14).** The model readout beside the
+map describes **the model that produced the numbers on screen**: on the 2026
+layer, that crop's own forecasting specification, its rainfall effect per
+100 mm, its R², its skill score against the district-median baseline, the
+verdict in words, the fit and test seasons, and any rejected specification
+with its reason; on an observed season, the shared Stage-1 fit. The page must
+never show one model's coefficients beside another's predictions.
+
+**On the dashboard (ERRATA C14).** The page carries **no** season-window
+sensitivity matrix and **no** cross-crop model-comparison chart: both are
+retired from the page, and both live in the README (§5 and F5). The page's
+per-crop ΔR² and skill figures remain in the model readout, and the forecast
+chart's foot still prints every crop's out-of-sample skill. The hover label is
+styled in the chart **layout** — a cream box, ink text, the page's typeface —
+so a label can never lose its text or spill unreadably out of its own box.
+
 **Model selection (ERRATA C10.2).** One specification per crop, chosen by
 leave-one-season-out cross-validation **inside the fitting period only**; the
 holdout block is evaluated once afterwards, so the reported skill is a holdout

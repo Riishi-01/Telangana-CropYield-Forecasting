@@ -497,6 +497,85 @@ rather than through a table row.
 
 ---
 
+## C14 — the page loses its two analysis sections, the masthead is rewritten, and the hover label is fixed
+
+**C14.1 — the season-window panel is retired from the page.** The section
+*Does the rainfall optimum depend on the season window?* — the three-window
+p-value and vertex matrix — is removed from the page, with its renderer, its
+CSS and the `window_sensitivity` payload in the dashboard bundle.
+
+The **analysis is unchanged and stays in the report of record**: README §5
+("Season-window sensitivity") keeps the full matrix, and
+`figures/f5_window_sensitivity.png` is still produced by `src/12_figure_window.py`
+and still listed in the figure table. Only the page's copy is retired. The
+artefact `data/processed/window_sensitivity.json` is still written by the
+pipeline and the verifier still checks the README matrix against it, because
+the README is the report.
+
+**C14.2 — the model-comparison chart is retired from the page.** The section
+*Does the weather model earn its place?* — the two-panel bar chart of ΔR²
+(Stage 2 − Stage 1) and of the skill score against the median baseline — is
+removed, with `renderStats()`, its CSS and its two `els` entries.
+
+What it carried is not lost from the page: the per-crop ΔR² and skill scores
+are in the **model readout** panel beside the map, and all four per-crop
+forecast skill scores are in the forecast chart's foot. What is lost is the
+side-by-side *comparison* of the four crops, which the README's skill table
+still gives. The README's §5 heading is retitled to **"Can rainfall predict a
+district's kharif yield?"**, which is what that section actually measures: the
+model against the district's own ten-year median.
+
+**C14.3 — the model readout now describes the model that produced the numbers
+on screen.** This fixes a real inconsistency, not a wording one. The page
+opens on the 2026 prediction layer, but the readout was describing the shared
+Stage-1 quadratic fit — so for rice it showed b₁ = 0.001474 and a skill of
+**−0.111**, while the map beside it was drawing the *linear* model's
+prediction, whose skill is **+0.078**. Two skill numbers for the same crop on
+one screen, and neither of them labelled as to which model it belonged.
+
+On the 2026 layer the readout now carries that crop's forecasting model: the
+specification as fitted (`yield ~ rain_mm + C(district_id) + C(year)`), the
+estimator, the rainfall effect restated per 100 mm in the crop's own unit, R²,
+the skill score against the district-median baseline with the verdict in words,
+the fit and test seasons with their row counts, and the rejected specification
+with its reason where there is one (arhar). On an observed season the readout
+is unchanged: it describes the shared Stage-1 fit. The bundle gains the fields
+this needs (train/test seasons, row counts) from `forecast_models.json`; no
+model is refitted.
+
+**C14.4 — the masthead is rewritten and the type scale is polished.** The
+headline is now **"Forecasting kharif yield from rainfall and 2026
+prediction"** on one line, and the standfirst is a labelled fact block instead
+of a paragraph: place, period, crops, data source, predictive model — the
+last of them naming the estimator as what it is (ordinary least squares with
+district and year fixed effects; statistical, not machine learning) and saying
+how it was chosen. The one-line rule is enforced by a width and a media query,
+not by luck. The display type is reduced from `5.2rem` to `2.85rem` and the
+section headings from `2rem` to `1.6rem` at their largest, because the old
+scale put a three-word heading on two lines and a five-word one on four.
+
+**C14.5 — the hover label no longer loses its text.** Plotly sizes a hover
+label's box from the text it measures, and the text it then draws is not
+always the text it measured. The label was measured in a narrow fallback face
+and drawn in the page's own typeface, so the tail of the line spilled out of
+the box — and on the old blue label that spill was **white on the cream page,
+so the reader saw a box with the text stopping in the middle of a word**. It
+was worst on the 2026 diamonds, at the right-hand edge of the chart, where the
+label is long and the point is at the margin.
+
+The fix is one shared `HOVER_LABEL` in the **layout** (Plotly reads
+`hoverlabel` from the layout; a `hoverlabel` in the *config* is silently
+ignored, which is why the first attempt at this fix did nothing): a cream box,
+a hairline border, ink text, and the page's typeface. The measurement and the
+drawing now agree, and even a spill would stay legible, because the text is
+ink on the page's own surface colour rather than white on a crop colour.
+
+**C14.6 — the yield-per-year chart is named for what it is.** The forecast
+section's heading is now **"Yield per year, and the 2026 prediction"**.
+
+---
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -514,7 +593,7 @@ rather than through a table row.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 55 headless checks |
+| G11 dashboard QA | **PASS** — 60 headless checks |
 | G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
@@ -535,4 +614,9 @@ rather than through a table row.
 | **G11l the districts table is retired (C13.1)** | **PASS** — no `#forecastTable` in the DOM |
 | **G11m the disclosure footer and the disclaimer box are retired (C13.2, C13.3)** | **PASS** — no `#disclosureList`, no `footer.colophon`, no `#markerDisclaimer` |
 | **G11n the page still labels 2026 as a prediction (C13.3)** | **PASS** — the season option, the map note, the readout note and the hover card all carry it |
+| **G11o the window panel is retired from the page (C14.1)** | **PASS** — no `#windowHead`, no `#windowTable`, no `renderWindowPanel`, no `window_sensitivity` in the bundle; the README matrix and F5 are untouched |
+| **G11p the model-comparison chart is retired from the page (C14.2)** | **PASS** — no `#statsHead`, no `#statsChart`, no `renderStats`; the README §5 skill table and the renamed heading remain |
+| **G11q the readout describes the forecasting model (C14.3)** | **PASS** — on the 2026 layer it names the specification, the per-100-mm effect, R², the skill and the verdict; on an observed season it names the Stage-1 fit |
+| **G11r the masthead is one line and the type scale is polished (C14.4, C14.6)** | **PASS** — the headline does not wrap at 1500px; the standfirst names place, period, crops, source and estimator |
+| **G11s the hover label keeps its text (C14.5)** | **PASS** — the label is styled in the layout; the text fits inside its own box on every trace, checked with a real hover on the state lines, the diamonds and a district point |
 | G13 local commits clean; no push | **PASS** — no remote configured |
