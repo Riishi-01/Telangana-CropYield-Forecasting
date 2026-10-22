@@ -31,6 +31,8 @@
       "#313695", "#4575b4", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf",
       "#fee090", "#fdae61", "#f46d43", "#d73027", "#a50026"
     ],
+    // YlOrRd: the deficit value is positive for a shortfall, so the darkest
+    // red sits at the high end of the domain - the worst case reads darkest.
     deficit: [
       "#ffffcc", "#ffeda0", "#fed976", "#feb24c", "#fd8d3c",
       "#fc4e2a", "#e31a1c", "#bd0026", "#800026"
@@ -273,16 +275,44 @@
   function valueForDistrict(slug) {
     var v = districtValue(state.crop, state.season, slug);
     if (!v) return null;
-    return state.metric === "anomaly" ? v[1] : v[0];
+    if (state.metric === "anomaly") return v[1];
+    if (state.metric === "yield") return v[0];
+    // rainfall deficit: this season's rain against this district's own median.
+    // Positive = a shortfall, negative = a surplus, so the sign reads the way
+    // a reader expects and the darkest red is the worst case.
+    var ref = districtRefMedian(slug);
+    if (ref === null || !v[2]) return null;
+    return 100.0 * (1.0 - v[2] / ref);
+  }
+
+  function districtRefMedian(slug) {
+    var d = D.districts.find(function (x) { return x.s === slug; });
+    return d && d.rmed !== undefined && d.rmed !== null ? d.rmed : null;
   }
 
   function domainFor() {
+    if (state.metric === "deficit") {
+      return (D.domains && D.domains.deficit) || [-100, 100];
+    }
     var dom = D.domains[state.crop] || { anomaly: [-50, 50], yield: [0, 1] };
     return state.metric === "anomaly" ? dom.anomaly : dom.yield;
   }
 
   function rampName() {
+    if (state.metric === "deficit") return "deficit";
     return state.metric === "anomaly" ? "anomaly" : "yield";
+  }
+
+  function metricUnit() {
+    if (state.metric === "anomaly") return "%";
+    if (state.metric === "deficit") return "%";
+    return unitOf(state.crop);
+  }
+
+  function metricLabel() {
+    if (state.metric === "anomaly") return "yield anomaly";
+    if (state.metric === "deficit") return "rainfall deficit";
+    return "yield";
   }
 
   function styleDistrict(slug) {
@@ -306,7 +336,7 @@
     // The value is written on the map as well as encoded in colour, so the
     // map never relies on colour alone.
     var label = value === null ? "n/a" :
-      (state.metric === "anomaly" ? fmt(value, 0) : fmt(value, 1));
+      (state.metric === "yield" ? fmt(value, 1) : fmt(value, 0));
 
     if (lyr.getTooltip()) {
       lyr.setTooltipContent(label);
@@ -331,8 +361,12 @@
       hoverCard.innerHTML =
         "<strong>" + esc(districtLabel(slug)) + "</strong><br>" +
         state.season + "<br>" +
-        "rainfall " + fmt(v[2], 0) + " mm<br>" +
-        "yield " + fmt(v[0], 2) + " " + unitOf(state.crop) + "<br>" +
+        "rainfall " + fmt(v[2], 0) + " mm" +
+        (districtRefMedian(slug) !== null
+          ? "<br>vs own median " + fmt(districtRefMedian(slug), 0) + " mm (" +
+            fmt(100 * (1 - v[2] / districtRefMedian(slug)), 0) + "% deficit)"
+          : "") + "<br>" +
+        "yield " + fmt(v[0], 2) + " " + unitOf(crop) + "<br>" +
         "anomaly " + fmt(v[1], 0) + "%<br>" +
         "longest dry run " + v[3] + " d · heat days " + v[5];
     }
@@ -372,9 +406,11 @@
     var gradient = "linear-gradient(90deg, " + stops.join(",") + ")";
     var lo = dom[0];
     var hi = dom[1];
-    var name = state.metric === "anomaly" ? "RdYlBu (diverging)" : "Blues (sequential)";
-    var unit = state.metric === "anomaly" ? "%" : unitOf(state.crop);
-    var what = state.metric === "anomaly" ? "yield anomaly" : "yield";
+    var unit = metricUnit();
+    var what = metricLabel();
+    var name = state.metric === "anomaly" ? "RdYlBu (diverging)"
+            : state.metric === "deficit" ? "YlOrRd (sequential)"
+            : "Blues (sequential)";
     els.legendScale.innerHTML =
       "<span>" + fmt(lo, 1) + "</span>" +
       '<span class="legend__ramp" style="background:' + gradient + '"></span>' +
@@ -384,6 +420,12 @@
       state.metric === "anomaly"
         ? "Colormap " + name + ", fixed domain across every season — the scale never rescales. " +
           "Blue is below normal, cream is normal, red is above normal. Districts with no observation are grey."
+        : state.metric === "deficit"
+        ? "Colormap " + name + ", fixed domain across every season. " +
+          "Rainfall this season against that district's own 2016-17–2022-23 median: " +
+          "a positive value is a shortfall and dark red is a large one, so the scale reads as drought severity. " +
+          "The reference is each district's own norm, so the map shows where a season was dry " +
+          "for that district rather than for the state. Districts with no observation are grey."
         : "Colormap " + name + ", fixed domain across every season. Absolute yield across Telangana is " +
           "dominated by soil and irrigation, so this view reads as a soil map, not a risk map; " +
           "the anomaly view is the risk view.";
@@ -775,6 +817,7 @@
     var out = [];
     rows.forEach(function (v, i) {
       if (!v) return;
+      var ref = districtRefMedian(D.districts[i].s);
       out.push({
         slug: D.districts[i].s,
         label: D.districts[i].l,
@@ -782,10 +825,43 @@
         yield: v[0],
         anomaly: v[1],
         dry: v[3],
-        heat: v[5]
+        heat: v[5],
+        deficit: ref && v[2] ? 100 * (1 - v[2] / ref) : null
       });
     });
     return out;
+  }
+
+  // the table columns follow the map metric, so the numbers on screen always
+  // match the colours on the map
+  function tableColumns() {
+    if (state.metric === "deficit") {
+      return [
+        { key: "label", title: "District", num: false },
+        { key: "rain", title: "Rain (mm)", num: true },
+        { key: "deficit", title: "Rain deficit (%)", num: true },
+        { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
+        { key: "dry", title: "Longest dry run (d)", num: true },
+        { key: "heat", title: "Heat days", num: true }
+      ];
+    }
+    if (state.metric === "yield") {
+      return [
+        { key: "label", title: "District", num: false },
+        { key: "rain", title: "Rain (mm)", num: true },
+        { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
+        { key: "dry", title: "Longest dry run (d)", num: true },
+        { key: "heat", title: "Heat days", num: true }
+      ];
+    }
+    return [
+      { key: "label", title: "District", num: false },
+      { key: "rain", title: "Rain (mm)", num: true },
+      { key: "yield", title: "Yield (" + unitOf(state.crop) + ")", num: true },
+      { key: "anomaly", title: "Anomaly (%)", num: true },
+      { key: "dry", title: "Longest dry run (d)", num: true },
+      { key: "heat", title: "Heat days", num: true }
+    ];
   }
 
   function renderTable() {
@@ -796,21 +872,38 @@
       var x = a[key];
       var y = b[key];
       if (typeof x === "string") return x.localeCompare(y) * dir;
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
       return ((x || 0) - (y || 0)) * dir;
     });
 
+    var cols = tableColumns();
+    var head = document.querySelector("#districtTable thead tr");
+    head.innerHTML = cols.map(function (c) {
+      var sortAttr = ' data-sort="' + c.key + '"';
+      var aria = state.sort.key === c.key
+        ? ' aria-sort="' + (state.sort.dir === 1 ? "ascending" : "descending") + '"'
+        : "";
+      return "<th scope='col'" + sortAttr + aria +
+        (c.num ? " class='num'" : "") + ">" + esc(c.title) + "</th>";
+    }).join("");
+
     var unit = unitOf(state.crop);
     var html = rows.map(function (r) {
+      var cells = cols.map(function (c) {
+        if (c.key === "label") return "<td>" + esc(r.label) + "</td>";
+        var v = r[c.key];
+        var txt = v === null || v === undefined
+          ? "—"
+          : (c.key === "yield" ? fmt(v, 2)
+             : c.key === "anomaly" ? fmt(v, 0)
+             : c.key === "deficit" ? fmt(v, 0)
+             : fmt(v, 0));
+        return "<td class='num'>" + txt + "</td>";
+      }).join("");
       return (
         "<tr data-slug='" + r.slug + "'" + (state.pinned === r.slug ? ' class="is-pinned"' : "") +
-        " tabindex='0'>" +
-        "<td>" + esc(r.label) + "</td>" +
-        "<td class='num'>" + fmt(r.rain, 0) + "</td>" +
-        "<td class='num'>" + fmt(r.yield, 2) + "</td>" +
-        "<td class='num'>" + fmt(r.anomaly, 0) + "</td>" +
-        "<td class='num'>" + fmt(r.dry, 0) + "</td>" +
-        "<td class='num'>" + fmt(r.heat, 0) + "</td>" +
-        "</tr>"
+        " tabindex='0'>" + cells + "</tr>"
       );
     }).join("");
 
@@ -818,7 +911,7 @@
       return d.s && !rows.some(function (r) { return r.slug === d.s; });
     });
     if (missing.length) {
-      html += "<tr class='is-empty'><td colspan='6'>No observation this season: " +
+      html += "<tr class='is-empty'><td colspan='" + cols.length + "'>No observation this season: " +
         missing.map(function (d) { return esc(d.l); }).join(", ") + "</td></tr>";
     }
 
@@ -838,26 +931,20 @@
       state.season + " · " + rows.length + " districts · " + unit;
   }
 
-  Array.prototype.forEach.call(
-    document.querySelectorAll("#districtTable th[data-sort]"),
-    function (th) {
-      th.addEventListener("click", function () {
-        var key = th.getAttribute("data-sort");
-        if (state.sort.key === key) {
-          state.sort.dir = -state.sort.dir;
-        } else {
-          state.sort.key = key;
-          state.sort.dir = 1;
-        }
-        Array.prototype.forEach.call(
-          document.querySelectorAll("#districtTable th[data-sort]"),
-          function (o) { o.removeAttribute("aria-sort"); }
-        );
-        th.setAttribute("aria-sort", state.sort.dir === 1 ? "ascending" : "descending");
-        renderTable();
-      });
+  // The table header is rebuilt when the map metric changes, so the sort
+  // handler is delegated from the header row rather than bound per cell.
+  document.getElementById("districtTable").addEventListener("click", function (e) {
+    var th = e.target.closest("th[data-sort]");
+    if (!th) return;
+    var key = th.getAttribute("data-sort");
+    if (state.sort.key === key) {
+      state.sort.dir = -state.sort.dir;
+    } else {
+      state.sort.key = key;
+      state.sort.dir = 1;
     }
-  );
+    renderTable();
+  });
 
   /* ---------------------------------------------------------------------- *
    * Model comparison chart
@@ -960,13 +1047,68 @@
   }
 
   /* ---------------------------------------------------------------------- *
+   * Window sensitivity panel
+   * ---------------------------------------------------------------------- */
+  function renderWindowPanel() {
+    var ws = D.window_sensitivity;
+    var headRow = document.getElementById("windowHeadRow");
+    var body = document.querySelector("#windowTable tbody");
+    if (!ws || !ws.available) {
+      headRow.innerHTML = "";
+      body.innerHTML = "";
+      document.getElementById("windowFoot").textContent =
+        "The window sensitivity has not been computed in this build.";
+      return;
+    }
+    var order = ws.window_order;
+    headRow.innerHTML =
+      "<th scope='col'>Crop</th>" +
+      order.map(function (w) {
+        return "<th scope='col' class='num'>" + esc(ws.windows[w]) + "</th>";
+      }).join("");
+
+    var html = Object.keys(ws.crops).map(function (crop) {
+      var cells = order.map(function (w) {
+        var r = ws.crops[crop][w];
+        if (!r) return "<td class='num'>—</td>";
+        var sig = r.p2 < 0.05;
+        var txt = "p = " + (r.p2 < 0.001 ? "<0.001" : r.p2.toFixed(3));
+        if (r.vertex_reported) {
+          txt += "<br><strong>R* = " + fmt(r.vertex_mm, 0) + " mm</strong>";
+        } else {
+          txt += "<br>no vertex";
+        }
+        return "<td class='num' style='" +
+          (sig ? "color:var(--color-accent);font-weight:600" : "color:var(--color-ink-muted)") +
+          "'>" + txt + "</td>";
+      }).join("");
+      return "<tr><td>" + esc(cropTitle(crop)) + "</td>" + cells + "</tr>";
+    }).join("");
+    body.innerHTML = html;
+
+    var stable = Object.keys(ws.crops).every(function (crop) {
+      var flags = order.map(function (w) { return ws.crops[crop][w].vertex_reported; });
+      return flags.every(function (f) { return f === flags[0]; });
+    });
+    document.getElementById("windowFoot").textContent =
+      "p is the p-value of the quadratic rainfall term; a vertex is reported only when the term is " +
+      "negative and significant at p < 0.05. " +
+      (stable
+        ? "The conclusion does not depend on the window: the same crops support an inverted-U " +
+          "under all three windows, and the others support none."
+        : "The conclusion depends on the window for at least one crop.") +
+      " The Jun–Sep column reproduces the shipped Stage 1 fit exactly.";
+  }
+
+  /* ---------------------------------------------------------------------- *
    * CSV export
    * ---------------------------------------------------------------------- */
   function exportCsv() {
     var rows = tableRows();
     var head = [
-      "crop", "season", "district_slug", "district", "rainfall_mm", "yield", "unit",
-      "yield_anomaly_pct", "longest_dry_run_days", "heat_days"
+      "crop", "season", "district_slug", "district", "rainfall_mm",
+      "yield", "yield_unit", "yield_anomaly_pct", "rain_deficit_pct",
+      "longest_dry_run_days", "heat_days"
     ];
     var lines = [head.join(",")];
     rows.forEach(function (r) {
@@ -976,7 +1118,9 @@
         '"' + r.slug + '"',
         '"' + r.label + '"',
         r.rain, r.yield, '"' + unitOf(state.crop) + '"',
-        r.anomaly, r.dry, r.heat
+        r.anomaly,
+        r.deficit === null ? "" : r.deficit.toFixed(1),
+        r.dry, r.heat
       ].join(","));
     });
     var blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -1014,13 +1158,9 @@
   }
 
   function cropTitle(crop) {
-    var map = {
-      "Cotton(lint)": "Cotton (lint)",
-      "Arhar/Tur": "Arhar / Tur",
-      "Moong(Green Gram)": "Moong (green gram)",
-      "Rice": "Rice"
-    };
-    return map[crop] || crop;
+    // labels come from the bundle (src/10_build_dashboard.py -> common.CROP_LABELS)
+    if (D.crop_labels && D.crop_labels[crop]) return D.crop_labels[crop];
+    return crop;
   }
 
   function renderAll() {
@@ -1029,6 +1169,7 @@
     renderReadout();
     renderCurve();
     renderTable();
+    renderWindowPanel();
 
     var m = modelFor(state.crop);
     if (isModelled(state.crop)) {
@@ -1046,7 +1187,9 @@
 
     els.mapNote.textContent =
       state.season + " · " + cropTitle(state.crop) + " · " +
-      (state.metric === "anomaly" ? "yield anomaly (%)" : "absolute yield (" + unitOf(state.crop) + ")");
+      (state.metric === "anomaly" ? "yield anomaly (%)"
+       : state.metric === "deficit" ? "rainfall deficit (%)"
+       : "absolute yield (" + unitOf(state.crop) + ")");
 
     if (D.marker && D.marker.available) {
       els.markerDisclaimer.hidden = false;

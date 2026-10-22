@@ -40,6 +40,7 @@
       <select id="metricSelect">
         <option value="anomaly">Yield anomaly (%)</option>
         <option value="yield">Absolute yield</option>
+        <option value="deficit">Rainfall deficit (%)</option>
       </select>
     </div>
     <div class="control control--actions">
@@ -104,6 +105,21 @@
          aria-label="Scatter of kharif rainfall against yield with the fitted quadratic response curve and the rainfall optimum where one is statistically supported."></div>
     <p class="disclaimer" id="markerDisclaimer" hidden></p>
     <p class="chart-foot" id="curveFoot">—</p>
+  </section>
+
+  <!-- ── window sensitivity ────────────────────────────────────────────── -->
+  <section class="region region--window" aria-labelledby="windowHead">
+    <div class="section-head">
+      <h2 id="windowHead">Does the optimum depend on the season window?</h2>
+      <p class="section-note">Jun–Sep is the sowing window, not the growing season. The same model is refitted on Jul–Sep and Jun–Oct rainfall to test whether the conclusion survives a different window.</p>
+    </div>
+    <div class="table-wrap">
+      <table id="windowTable" class="window-table">
+        <thead><tr id="windowHeadRow"></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="chart-foot" id="windowFoot">—</p>
   </section>
 
   <!-- ── table ───────────────────────────────────────────────────────── -->
