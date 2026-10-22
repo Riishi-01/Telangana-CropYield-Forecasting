@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telangana kharif yield–weather explorer</title>
+<meta name="description" content="Interactive read of Telangana district kharif yields (DES) against ERA5 rainfall, 2016-17 to 2022-23, with the fitted rainfall response curve and the 2026 rainfall marker.">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/vendor/leaflet.css">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to the analysis</a>
+
+<header class="masthead">
+  <div class="masthead__meta">
+    <span>Kharif</span><span aria-hidden="true">·</span><span>Telangana</span><span aria-hidden="true">·</span><span>ERA5 reanalysis</span><span aria-hidden="true">·</span><span>DATA_VERSION <span id="dataVersion">—</span></span>
+  </div>
+
+  <h1>When the rain falls,<br>what does the harvest do?</h1>
+
+  <p class="standfirst">
+    An interactive read of Telangana's thirty-two districts: kharif yield from the
+    Directorate of Economics &amp; Statistics, set against ERA5 rainfall for the
+    same seasons. Every number here is an observation or a fitted model — nothing
+    is forecast.
+  </p>
+
+  <div class="controls" role="group" aria-label="Analysis controls">
+    <div class="control">
+      <label for="cropSelect">Crop</label>
+      <select id="cropSelect"></select>
+    </div>
+    <div class="control">
+      <label for="seasonSelect">Season</label>
+      <select id="seasonSelect"></select>
+    </div>
+    <div class="control">
+      <label for="metricSelect">Map metric</label>
+      <select id="metricSelect">
+        <option value="anomaly">Yield anomaly (%)</option>
+        <option value="yield">Absolute yield</option>
+      </select>
+    </div>
+    <div class="control control--actions">
+      <button type="button" id="resetBtn" class="ghost-btn">Clear selection</button>
+      <button type="button" id="csvBtn" class="ghost-btn">Download this view (CSV)</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ── map ─────────────────────────────────────────────────────────── -->
+  <section class="region region--map" aria-labelledby="mapHead">
+    <div class="section-head">
+      <h2 id="mapHead">District map</h2>
+      <p class="section-note" id="mapNote">—</p>
+    </div>
+    <div id="map" role="application"
+         aria-label="Choropleth map of Telangana districts. The table below carries the same values in text form."></div>
+    <div class="legend" id="mapLegend">
+      <div class="legend__scale" id="legendScale"></div>
+      <p class="legend__caption" id="legendCaption">—</p>
+    </div>
+  </section>
+
+  <!-- ── readout ─────────────────────────────────────────────────────── -->
+  <aside class="region region--readout" aria-labelledby="readHead">
+    <div class="section-head">
+      <h2 id="readHead">Season readout</h2>
+      <p class="section-note" id="readNote">—</p>
+    </div>
+
+    <div class="readout">
+      <h3 class="readout__title" id="rainTitle">
+        <span class="icon icon--rain" aria-hidden="true"></span>Kharif rainfall
+      </h3>
+      <div id="rainChart" class="chart chart--sm" role="img" aria-label="Kharif rainfall by season with the p10 to p90 band across districts."></div>
+    </div>
+
+    <div class="readout">
+      <h3 class="readout__title" id="yieldTitle">
+        <span class="icon icon--yield" aria-hidden="true"></span>Crop yield
+      </h3>
+      <div id="yieldChart" class="chart chart--sm" role="img" aria-label="Crop yield by season with the p10 to p90 band across districts."></div>
+    </div>
+
+    <div class="readout readout--model" id="modelReadout">
+      <h3 class="readout__title">
+        <span class="icon icon--model" aria-hidden="true"></span>Model readout
+      </h3>
+      <dl id="modelFacts" class="facts"></dl>
+    </div>
+  </aside>
+
+  <!-- ── response curve ──────────────────────────────────────────────── -->
+  <section class="region region--curve" aria-labelledby="curveHead">
+    <div class="section-head">
+      <h2 id="curveHead">Rainfall → yield response</h2>
+      <p class="section-note" id="curveNote">—</p>
+    </div>
+    <div id="curveChart" class="chart chart--lg" role="img"
+         aria-label="Scatter of kharif rainfall against yield with the fitted quadratic response curve and the rainfall optimum where one is statistically supported."></div>
+    <p class="disclaimer" id="markerDisclaimer" hidden></p>
+    <p class="chart-foot" id="curveFoot">—</p>
+  </section>
+
+  <!-- ── table ───────────────────────────────────────────────────────── -->
+  <section class="region region--table" aria-labelledby="tableHead">
+    <div class="section-head">
+      <h2 id="tableHead">Districts <span class="section-note section-note--inline" id="tableSubtitle">—</span></h2>
+      <p class="section-note">Sortable. Select a row to pin the district on the map and the curve.</p>
+    </div>
+    <div class="table-wrap">
+      <table id="districtTable">
+        <thead>
+          <tr>
+            <th scope="col" data-sort="label">District</th>
+            <th scope="col" data-sort="rain" class="num">Rain (mm)</th>
+            <th scope="col" data-sort="yield" class="num">Yield</th>
+            <th scope="col" data-sort="anomaly" class="num">Anomaly (%)</th>
+            <th scope="col" data-sort="dry" class="num">Longest dry run (d)</th>
+            <th scope="col" data-sort="heat" class="num">Heat days</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── model comparison ────────────────────────────────────────────── -->
+  <section class="region region--stats" aria-labelledby="statsHead">
+    <div class="section-head">
+      <h2 id="statsHead">Does the weather model earn its place?</h2>
+      <p class="section-note">Stage 2 adds dry-spell, heat and VPD features to the rainfall quadratic. The test period is the three seasons after the training block.</p>
+    </div>
+    <div id="statsChart" class="chart chart--md" role="img"
+         aria-label="Bar chart comparing the change in R squared between Stage 1 and Stage 2, and the out-of-sample skill score against the median baseline, for each crop."></div>
+    <p class="chart-foot" id="statsFoot">—</p>
+  </section>
+</main>
+
+<footer class="colophon">
+  <h2>What this is not</h2>
+  <ol class="disclosures" id="disclosureList"></ol>
+  <p class="colophon__meta" id="colophonMeta">—</p>
+</footer>
+
+<script src="assets/vendor/plotly.min.js"></script>
+<script src="assets/vendor/leaflet.js"></script>
+<script src="data/bundle.js"></script>
+<script src="data/geo.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

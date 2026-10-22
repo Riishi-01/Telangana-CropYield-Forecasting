@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>QA</title></head>
+<body>
+<!--
+  Headless QA harness for the dashboard.  It loads the real dashboard in an iframe, drives the
+  controls the way a user would, and writes a machine-readable summary into
+  the document so `chrome --headless --dump-dom` can assert on it.
+  This file is a test fixture, not part of the published site.
+-->
+<iframe id="app" src="../dashboard/index.html" style="width:1400px;height:1200px;border:0"></iframe>
+<pre id="out">pending</pre>
+<script>
+var frame = document.getElementById("app");
+var tries = 0;
+
+function publish(obj) {
+  var text = "QA_RESULT " + JSON.stringify(obj);
+  document.getElementById("out").textContent = text;
+  document.title = text;
+}
+
+function fire(el) { el.dispatchEvent(new Event("change", { bubbles: true })); }
+function txt(node) { return node.textContent.replace(/\s+/g, " ").trim(); }
+
+function run(d, w) {
+  var results = {};
+  function setSelect(id, value) {
+    var el = d.getElementById(id);
+    el.value = value;
+    fire(el);
+  }
+
+  results.defaultTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
+  results.defaultFacts = txt(d.getElementById("modelFacts"));
+  results.defaultCurveNote = txt(d.getElementById("curveNote"));
+  results.disclaimerVisible = !d.getElementById("markerDisclaimer").hidden;
+  results.disclaimer = txt(d.getElementById("markerDisclaimer"));
+
+  setSelect("cropSelect", "Rice");
+  results.riceFacts = txt(d.getElementById("modelFacts"));
+  results.riceCurveNote = txt(d.getElementById("curveNote"));
+  results.riceTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
+
+  setSelect("cropSelect", "Wheat");
+  results.wheatFacts = txt(d.getElementById("modelFacts"));
+  results.wheatCurveNote = txt(d.getElementById("curveNote"));
+  results.wheatTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
+
+  setSelect("cropSelect", "Cotton(lint)");
+  setSelect("seasonSelect", "2018-19");
+  results.seasonTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
+  results.mapNote = txt(d.getElementById("mapNote"));
+  results.tableSubtitle = txt(d.getElementById("tableSubtitle"));
+
+  setSelect("metricSelect", "yield");
+  results.legendAfterMetric = txt(d.getElementById("legendScale"));
+  setSelect("metricSelect", "anomaly");
+
+  var firstRow = d.querySelector("#districtTable tbody tr[data-slug]");
+  if (firstRow) {
+    firstRow.click();
+    results.pinnedRows = d.querySelectorAll("#districtTable tbody tr.is-pinned").length;
+  }
+
+  d.querySelector('#districtTable th[data-sort="rain"]').click();
+  // only the rainfall column, which is the first numeric cell of each row
+  var nums = Array.prototype.map.call(
+    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
+    function (tr) {
+      return parseFloat(tr.children[1].textContent.replace(/[^0-9.\-]/g, ""));
+    }
+  );
+  results.sortedAscending = nums.every(function (v, i) { return i === 0 || nums[i - 1] <= v; });
+  results.sortRowCount = nums.length;
+  d.querySelector('#districtTable th[data-sort="rain"]').click();
+  var nums2 = Array.prototype.map.call(
+    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
+    function (tr) {
+      return parseFloat(tr.children[1].textContent.replace(/[^0-9.\-]/g, ""));
+    }
+  );
+  results.sortedDescending = nums2.every(function (v, i) { return i === 0 || nums2[i - 1] >= v; });
+
+  results.leafletPaths = d.querySelectorAll("#map path").length;
+  results.mapLabels = d.querySelectorAll("#map .district-label").length;
+  results.curvePlot = d.querySelectorAll("#curveChart svg").length;
+  results.curveScatterPaths = d.querySelectorAll("#curveChart .scatterlayer path").length;
+  results.curveShapes = d.querySelectorAll("#curveChart .shapelayer path").length;
+  results.statsPlot = d.querySelectorAll("#statsChart svg").length;
+  results.statsBars = d.querySelectorAll("#statsChart .barlayer path").length;
+  results.disclosureItems = d.querySelectorAll("#disclosureList li").length;
+
+  publish(results);
+}
+
+var iv = setInterval(function () {
+  tries++;
+  try {
+    var d = frame.contentDocument;
+    if (d && d.getElementById("districtTable") &&
+        d.querySelectorAll("#districtTable tbody tr[data-slug]").length > 0 &&
+        d.querySelectorAll("#curveChart svg").length > 0) {
+      clearInterval(iv);
+      run(d, frame.contentWindow);
+    } else if (tries > 300) {
+      clearInterval(iv);
+      var diag = { error: "timeout waiting for the app to render" };
+      try {
+        var dd = frame.contentDocument;
+        diag.hasBundle = typeof dd.defaultView.TA_DATA;
+        diag.hasGeo = typeof dd.defaultView.TA_GEO;
+        diag.cropOptions = dd.getElementById("cropSelect") ?
+          dd.getElementById("cropSelect").options.length : -1;
+        diag.tableRows = dd.querySelectorAll("#districtTable tbody tr").length;
+        diag.tableRowsWithSlug = dd.querySelectorAll('#districtTable tbody tr[data-slug]').length;
+        diag.curvePlots = dd.querySelectorAll("#curveChart svg").length;
+        diag.anyPlotsInCurve = dd.getElementById("curveChart") ?
+          dd.getElementById("curveChart").children.length : -1;
+        diag.plots = dd.querySelectorAll(".js-plotly-plot").length;
+        diag.mapPaths = dd.querySelectorAll("#map path").length;
+        diag.bodyStart = dd.body.textContent.replace(/\s+/g, " ").trim().slice(0, 200);
+      } catch (e) { diag.inner = String(e); }
+      publish(diag);
+    }
+  } catch (e) {
+    if (tries > 300) { clearInterval(iv); publish({ error: String(e) }); }
+  }
+}, 50);
+</script>
+</body>
+</html>

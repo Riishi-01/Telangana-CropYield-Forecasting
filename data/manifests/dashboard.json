@@ -1,0 +1,34 @@
+{
+  "artifact": "dashboard",
+  "bundle_js": "dashboard/data/bundle.js",
+  "bundle_sha256": "6b44cd27741fdba5246ae51eb2c4140207659331a34f8f7c6be00904c75bf3a7",
+  "created_utc": "2026-10-22T01:13:33+00:00",
+  "crops": 31,
+  "data_version": "1.0.0",
+  "districts": 32,
+  "geo_js": "dashboard/data/geo.js",
+  "geo_sha256": "d69e0d305d9df9ad56a6684d254fa7bdb3c244f43d672ecd6268eb18f5573e26",
+  "libraries": {
+    "fonts": "Instrument Serif, IBM Plex Sans, IBM Plex Mono (SIL OFL 1.1)",
+    "leaflet": "1.9.4 (BSD-2-Clause)",
+    "plotly": "2.35.2 (MIT)"
+  },
+  "marker_2026_available": true,
+  "modelled_crops": [
+    "Cotton(lint)",
+    "Arhar/Tur",
+    "Moong(Green Gram)",
+    "Rice"
+  ],
+  "offline": "all libraries, fonts and data are served from the repository; no CDN",
+  "panel_sha256": "c35be46fbad21406c8aeccc7dfeaaa0acf85585377b06f4a212e90f1e061eddd",
+  "seasons": [
+    "2016-17",
+    "2017-18",
+    "2018-19",
+    "2019-20",
+    "2020-21",
+    "2021-22",
+    "2022-23"
+  ]
+}
