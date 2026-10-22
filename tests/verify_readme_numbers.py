@@ -569,8 +569,28 @@ def main() -> None:
           "32 districts" in index_html
           and "Kharif 2014-15" in index_html
           and "Cotton (lint), arhar/tur, moong (green gram), rice" in index_html
+          and "Agrometeorology" in index_html
           and "Open-Meteo archive API" in index_html
-          and "ordinary least squares" in index_html, "")
+          and "least squares with district and year fixed effects" in index_html, "")
+    check("the model readout panel is retired from the page",
+          'id="modelFacts"' not in index_html
+          and "renderModelFacts" not in app_js
+          and "forecastFacts" not in app_js, "")
+    check("the reading defaults to the rice prediction",
+          'DEFAULT_READING_CROP = "Rice"' in app_js, "")
+    check("the foot is headed items, not one paragraph",
+          'footItem("How to read the axis"' in app_js
+          and 'footItem("The state line"' in app_js
+          and 'footItemWide("The 2026 segment"' in app_js
+          and 'footItem("How well the model does"' in app_js, "")
+    check("the skill scores are listed one per crop",
+          "forecast-foot__skill" in app_js, "")
+    check("the hover label is lifted off the plot",
+          "drop-shadow" in styles
+          and ".hoverlayer g.hovertext > path" in styles, "")
+    check("the empty-state prompt is retired",
+          "forecastDetailEmpty" not in index_html
+          and "Select a point in the chart above" not in index_html, "")
     check("the yield-per-year chart is named",
           "Yield per year, and the 2026 prediction" in index_html, "")
     cfg_block = app_js[app_js.index("var PLOT_CONFIG"):
@@ -579,10 +599,7 @@ def main() -> None:
           "hoverlabel: HOVER_LABEL" in app_js
           and "var HOVER_LABEL = {" in app_js
           and "hoverlabel" not in cfg_block, "")
-    check("the model readout reads out the forecasting model on the 2026 layer",
-          "forecastFacts" in app_js
-          and "2026 model" in app_js
-          and "Skill vs district median" in app_js, "")
+
 
     # ---- the disclosure set: the bundle and the report must agree -----------
     if bundle_path.exists():

@@ -31,7 +31,7 @@ function run(d, w) {
     fire(el);
   }
 
-  results.defaultFacts = txt(d.getElementById("modelFacts"));
+  results.modelReadoutPresent = !!d.getElementById("modelFacts");
 
   // the DEFAULT state: the map opens on the 2026 prediction, cotton, and
   // absolute yield
@@ -83,18 +83,18 @@ function run(d, w) {
   results.summaryDeltas = d.querySelectorAll("#stateSummary .state-summary__delta").length;
   results.summaryNote = txt(d.getElementById("stateSummaryNote"));
 
-  // the model readout: on the 2026 layer it describes the model that
-  // produced the prediction, on an observed season the shared Stage-1 fit
-  results.forecastFacts = txt(d.getElementById("modelFacts"));
   setSelect("seasonSelect", "2018-19");
-  results.observedFacts = txt(d.getElementById("modelFacts"));
+  results.mapNote2018 = txt(d.getElementById("mapNote"));
 
-  // the crop selector and the model facts follow the selected crop
+  // the crop selector follows the selection
   setSelect("cropSelect", "Rice");
-  results.riceFacts = txt(d.getElementById("modelFacts"));
+  setSelect("seasonSelect", "2026-27");
+  results.cropTitleRice = txt(d.getElementById("yieldTitle"));
 
   setSelect("cropSelect", "Wheat");
-  results.wheatFacts = txt(d.getElementById("modelFacts"));
+  results.wheatOptionLabel = Array.prototype.map.call(
+    d.getElementById("cropSelect").options, function (o) { return o.textContent.trim(); }
+  )[3];
 
   setSelect("cropSelect", "Cotton(lint)");
   results.mapNote = txt(d.getElementById("mapNote"));
@@ -125,6 +125,8 @@ function run(d, w) {
   // the hover label is styled in the LAYOUT, so the text can never be drawn
   // outside its own box (the invisible-text bug)
   var fc = d.getElementById("forecastChart");
+  var hp = d.querySelector("#forecastChart .hoverlayer g.hovertext > path");
+  results.hoverShadow = hp ? (hp.ownerDocument.defaultView.getComputedStyle(hp).filter || "") : "";
   results.hoverLabel = fc && fc.layout && fc.layout.hoverlabel ? {
     bgcolor: fc.layout.hoverlabel.bgcolor,
     family: fc.layout.hoverlabel.font && fc.layout.hoverlabel.font.family,
@@ -255,6 +257,25 @@ function run(d, w) {
 
   results.detailPanelPresent = !!d.getElementById("forecastDetailBody");
   results.detailFields = 0;
+  // the reading defaults to the rice 2026 prediction (C15), and the
+  // empty-state prompt is gone from the page
+  results.defaultReading = txt(d.getElementById("forecastDetailTitle"));
+  results.defaultReadingFields = d.querySelectorAll("#forecastDetailBody > div").length;
+  results.defaultReadingHasRice = /Rice/.test(
+    txt(d.getElementById("forecastDetailBody")));
+  results.emptyPromptGone = !d.getElementById("forecastDetailEmpty");
+  results.readoutSplit = !!(
+    d.getElementById("forecastReadout") &&
+    d.getElementById("forecastReadout").className.indexOf("forecast-readout--split") >= 0);
+
+  // the foot is four headed items, not one paragraph
+  results.footTitles = Array.prototype.map.call(
+    d.querySelectorAll("#forecastFoot .forecast-foot__title"),
+    function (h) { return txt(h); });
+  results.footSkillRows = d.querySelectorAll(
+    "#forecastFoot .forecast-foot__skill").length;
+  results.footHasAxisRule = /indexed to its own Telangana average/.test(
+    txt(d.getElementById("forecastFoot")));
   // the 2026 diamond on the forecast chart opens the reading; the district
   // table that used to do it is retired
   // The 2026 diamond on the forecast chart opens the reading.  The district
@@ -278,7 +299,7 @@ function run(d, w) {
     }
   }
   results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
-  results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
+  results.detailTitleAfterClick = txt(d.getElementById("forecastDetailTitle"));
   results.detailHasRainfall = d.getElementById("forecastDetailBody")
     ? /rainfall/.test(d.getElementById("forecastDetailBody").textContent) : false;
   results.detailHasAreaBaseline = d.getElementById("forecastDetailBody")

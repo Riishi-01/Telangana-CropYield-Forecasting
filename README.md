@@ -581,8 +581,10 @@ where a season was dry *for that district* rather than for the state).
 
 The report reads in one direction: the map and the season readout establish what was
 observed; the forecast chart then states what the model predicts for 2026; and the state
-summary puts that forecast against the Telangana average. The model behind the numbers
-is named in the readout panel, which follows the crop selector.
+summary puts that forecast against the Telangana average. The chart's foot explains how
+to read the axis, the state line, the 2026 segment and the skill scores in four headed
+items, and the panel beside it opens on the rice prediction — the one crop whose model
+beats its own baseline — and follows any point the reader clicks.
 
 **What the page does not carry, and where it lives instead.** The per-district 2026
 numbers are on the map — as colour, as the number on each polygon, and in the hover
@@ -691,8 +693,8 @@ for step in 01_ingest_des 02_build_geo 03_fetch_era5 04_features \
 done
 
 # 3. the checks
-.venv/bin/python tests/verify_readme_numbers.py   # 316 README numbers vs the artefacts
-bash tests/run_dashboard_qa.sh                     # 60 headless checks
+.venv/bin/python tests/verify_readme_numbers.py   # 321 README numbers vs the artefacts
+bash tests/run_dashboard_qa.sh                     # 58 headless checks
 ```
 
 - `src/03_fetch_era5.py` takes an optional window argument: `analysis` (default),

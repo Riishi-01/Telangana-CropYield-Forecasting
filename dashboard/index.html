@@ -34,18 +34,13 @@
     </div>
     <div>
       <dt>Data source</dt>
-      <dd>DES yields; ERA5 reanalysis rainfall through the Open-Meteo archive API</dd>
+      <dd>Agrometeorology (DES yields; ERA5 reanalysis rainfall through the Open-Meteo archive API)</dd>
     </div>
     <div>
       <dt>Predictive model</dt>
-      <dd>Statistical, not machine learning — ordinary least squares with district and
-        year fixed effects. One specification per crop, chosen by leave-one-season-out
-        cross-validation inside the fitting period.</dd>
+      <dd>Statistical model (least squares with district and year fixed effects)</dd>
     </div>
   </dl>
-
-  <p class="standfirst__note">The 2026 figures are predictions from each crop's own
-    model, and every one of them carries that model's out-of-sample skill score.</p>
 
   <div class="controls" role="group" aria-label="Analysis controls">
     <div class="control">
@@ -111,24 +106,16 @@
       </h3>
       <div id="yieldChart" class="chart chart--sm" role="img" aria-label="Crop yield by season with the p10 to p90 band across districts."></div>
     </div>
-
-    <div class="readout readout--model" id="modelReadout">
-      <h3 class="readout__title" id="modelReadoutTitle">
-        <span class="icon icon--model" aria-hidden="true"></span>Model readout
-      </h3>
-      <dl id="modelFacts" class="facts"></dl>
-    </div>
   </aside>
 
   <!-- ── forecast ──────────────────────────────────────────────────────── -->
   <section class="region region--forecast" aria-labelledby="forecastHead">
     <div class="section-head">
       <h2 id="forecastHead">Yield per year, and the 2026 prediction</h2>
-      <p class="section-note">Each crop is forecast by its own model — the one that
-        survived cross-validation inside the fitting period and produced valid yields at
-        2026's rainfall. Every crop is indexed to its own Telangana average
-        (2016-17 → 2022-23 = 100), so crops measured in different units share one axis;
-        the dashed segment and the diamond are the 2026 prediction.</p>
+      <p class="section-note">Telangana's yield per hectare for four crops, one line
+        each, every line indexed to its own state average so the crops can be compared
+        in a single frame. 2026 is a prediction and is drawn dashed; nothing has been
+        observed for it.</p>
     </div>
 
     <div class="forecast-controls">
@@ -141,15 +128,14 @@
          aria-label="Line chart of the state yield per hectare for each crop by season, indexed to the Telangana average, with the 2026 prediction drawn as a dashed segment ending in a diamond."></div>
 
     <p class="forecast-legend" id="forecastLegend"></p>
-    <p class="chart-foot" id="forecastFoot">—</p>
 
-    <div class="forecast-detail" id="forecastDetail" aria-live="polite">
-      <p class="forecast-detail__empty" id="forecastDetailEmpty">
-        Select a point in the chart above to read that district-season: its yield, its
-        kharif rainfall, and how far the rainfall sat from that district's own norm.
-        Select the 2026 diamond to read a crop's forecast instead.
-      </p>
-      <dl class="forecast-detail__body" id="forecastDetailBody" hidden></dl>
+    <div class="forecast-readout" id="forecastReadout">
+      <div class="forecast-foot" id="forecastFoot"></div>
+
+      <div class="forecast-detail" id="forecastDetail" aria-live="polite">
+        <h3 class="forecast-detail__title" id="forecastDetailTitle">Reading</h3>
+        <dl class="forecast-detail__body" id="forecastDetailBody"></dl>
+      </div>
     </div>
   </section>
 

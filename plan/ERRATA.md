@@ -576,6 +576,69 @@ section's heading is now **"Yield per year, and the 2026 prediction"**.
 ---
 ---
 
+## C15 — the reading defaults to rice, the foot is explained in headed items, and the hover label is lifted off the plot
+
+**C15.1 — the reading panel opens on the rice 2026 prediction.** The panel
+under the chart no longer starts empty with a prompt to click a point; it
+starts on a reading. Rice, because it is the one crop whose model beats
+its own baseline out of sample (+0.078), so the page opens on a prediction
+that earned the right to be quoted. Cotton (−0.235) and moong (−0.017) are
+one click away and their diamonds still carry the negative skill. Clicking
+any point still replaces the reading; re-clicking rice's diamond leaves it.
+
+**C15.2 — the row under the chart is one column until it has two things to
+say.** The explanation and the reading share a row that is full width while
+the reading is empty and splits once it is populated, so a build with no
+forecast artefact leaves the explanation full width rather than sitting
+beside an empty column. This is the one place on the page where the
+method-selection procedure is **not** repeated: the foot says how to read
+the axis, the state line, the 2026 segment and the skill scores; it does not
+say how the specification was chosen.
+
+**C15.3 — the chart foot is four headed items, not one paragraph.** "How to
+read the axis", "The state line", "The 2026 segment" and "How well the
+model does", each one or two sentences, the skill scores as a list rather
+than a run-on. A reader who wants the axis rule should not have to read the
+skill scores to find it. The off-scale note is a fifth item and only appears
+when there are observations outside the plotted range.
+
+**C15.4 — the hover label is lifted off the plot.** Plotly paints an opaque
+box; what it cannot do is lift it, so over the lines a label read as a hole
+punched in the chart. A drop shadow on the label's box path gives it an edge
+and separates it from the series underneath. The detached-text capture that
+prompted this was the font-swap race — a label measured against a fallback
+face and drawn in the real one — which the shadow now hides rather than
+hides-but-does-not-fix: the box is opaque, so the text is never read against
+a line.
+
+**C15.5 — the model readout panel is retired.** The panel beside the map is
+removed, with `renderModelFacts()`, `forecastFacts()`, the `.facts` CSS and
+the model icon. Its content moves to the two places that already exist: the
+estimator is named in the masthead's *Predictive model* line, and the
+per-crop specification, rainfall effect, skill and verdict are on the
+reading panel, one click from any diamond. The page therefore states the
+method once, in the masthead, rather than twice in panels that can disagree
+— which is what produced C14's two skill numbers on one screen.
+
+**C15.6 — the discipline is named where the data is.** The data-source line
+reads **Agrometeorology (DES yields; ERA5 reanalysis rainfall through the
+Open-Meteo archive API)**. The predictor line reads **Statistical model
+(least squares with district and year fixed effects)** — method only, no
+"not machine learning" editorialising, because the label already says what
+kind of thing it is.
+
+**C15.7 — the code stops narrating itself.** app.js carried 198 comment
+lines. The four essay blocks — the hover-label rationale, the 25-line
+forecast header, the font gate and the `SEASON_2026` note — are cut to their
+load-bearing sentences, and the reasoning that made this codebase's numbers
+defensible moves here rather than being deleted: the hover-label defect
+(C14.5, C15.4), the indexing rule, the categorical-axis rule, the
+area-weighting rule and the font gate are all recorded. Every surviving
+comment answers *why*, none restates the line below it.
+
+---
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -593,7 +656,7 @@ section's heading is now **"Yield per year, and the 2026 prediction"**.
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 60 headless checks |
+| G11 dashboard QA | **PASS** — 58 headless checks |
 | G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
@@ -619,4 +682,9 @@ section's heading is now **"Yield per year, and the 2026 prediction"**.
 | **G11q the readout describes the forecasting model (C14.3)** | **PASS** — on the 2026 layer it names the specification, the per-100-mm effect, R², the skill and the verdict; on an observed season it names the Stage-1 fit |
 | **G11r the masthead is one line and the type scale is polished (C14.4, C14.6)** | **PASS** — the headline does not wrap at 1500px; the standfirst names place, period, crops, source and estimator |
 | **G11s the hover label keeps its text (C14.5)** | **PASS** — the label is styled in the layout; the text fits inside its own box on every trace, checked with a real hover on the state lines, the diamonds and a district point |
+| **G11t the reading defaults to the rice prediction (C15.1)** | **PASS** — the panel is populated on load with the rice 2026 reading and 8 fields; a click still replaces it |
+| **G11u the foot is headed items (C15.3)** | **PASS** — 4 sub-headings on the page, one skill row per crop, the axis rule stated |
+| **G11v the hover label is lifted off the plot (C15.4)** | **PASS** — `drop-shadow` is applied to the label's box path and computed as a filter |
+| **G11w the model readout is retired (C15.5)** | **PASS** — no `#modelFacts`, no `renderModelFacts`, no `.facts` in the stylesheet |
+| **G11x the discipline and the estimator are named (C15.6)** | **PASS** — the data-source line reads Agrometeorology; the predictor line names least squares with district and year fixed effects |
 | G13 local commits clean; no push | **PASS** — no remote configured |

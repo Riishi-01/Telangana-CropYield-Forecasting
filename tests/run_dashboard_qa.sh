@@ -48,17 +48,14 @@ if "error" in r:
     sys.exit(1)
 
 checks = [
-    ("the model readout renders", len(r.get("defaultFacts", "")) > 40),
-    ("the 2026 layer reads out the forecasting model",
-     "2026 model" in r.get("forecastFacts", "")
-     and "C(district_id)" in r.get("forecastFacts", "")
-     and "Skill vs district median" in r.get("forecastFacts", "")),
-    ("an observed season reads out the shared fit",
-     "Rainfall optimum" in r.get("observedFacts", "")),
-    ("rice reports a supported optimum R*", re.search(r"R\*\s*[0-9,]+\s*mm", r.get("riceFacts", "")) is not None),
-    ("unmodelled crop is not given a model",
-     "none for this crop" in r.get("wheatFacts", "")),
-    ("map note follows the selection", "2018-19" in r.get("mapNote", "")),
+    ("the model readout panel is retired", r.get("modelReadoutPresent") is False),
+    ("the readout title follows the crop",
+     "Rice" in r.get("cropTitleRice", "")),
+    ("the selector lists exactly the four project crops",
+     r.get("cropOptions") == 4),
+    ("map note follows the selection",
+     "2018-19" in r.get("mapNote2018", "")
+     and "2026-27 (prediction)" in r.get("mapNote", "")),
     ("metric toggle changes the legend",
      "yield (" in r.get("legendAfterMetric", "")
      and "anomaly" not in r.get("legendAfterMetric", "")),
@@ -80,8 +77,9 @@ checks = [
      "32 districts" in r.get("standfirst", "")
      and "Kharif 2014-15" in r.get("standfirst", "")
      and "Cotton (lint)" in r.get("standfirst", "")
+     and "Agrometeorology" in r.get("standfirst", "")
      and "Open-Meteo" in r.get("standfirst", "")
-     and "ordinary least squares" in r.get("standfirst", "")),
+     and "least squares with district and year fixed effects" in r.get("standfirst", "")),
     ("the hover label is styled in the layout",
      r.get("hoverLabel", {}).get("bgcolor") == "#fffdf9"
      and "IBM Plex Sans" in (r.get("hoverLabel", {}).get("family") or "")
@@ -145,7 +143,7 @@ checks = [
       r.get("forecastLegendItems") >= 5
       and "Telangana average" in r.get("forecastLegendText", "")
       and "2026 prediction" in r.get("forecastLegendText", "")
-      and "state yield per hectare" in r.get("forecastLegendText", "")),
+      and "Telangana yield per hectare" in r.get("forecastLegendText", "")),
      ("the legend names the district observations only when a crop is focused",
       "parent districts" not in r.get("forecastLegendText", "")
       and "parent districts" in r.get("afterUntickLegend", "")),

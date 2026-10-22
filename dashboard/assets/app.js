@@ -19,12 +19,10 @@
   var META = D.meta;
 
   /* ---------------------------------------------------------------------- *
-   * Colour ramps.
-   * The project's colour system is fixed: RdYlBu (diverging, zero at the
-   * exact midpoint) for yield anomaly, with blue = below normal and
-   * red = above normal, and YlOrRd (sequential) for rainfall deficit.
-   * Absolute yield uses a single-hue sequential ramp (Blues) so the red
-   * ramp is never used to mean "good".
+   * Colour ramps, fixed by the project colour system: RdYlBu (diverging,
+   * zero at the midpoint) for anomaly, YlOrRd for a rainfall shortfall, and
+   * Blues for absolute yield - never the red ramp, which must not be able to
+   * mean "good".
    * ---------------------------------------------------------------------- */
   var RAMPS = {
     anomaly: [
@@ -83,9 +81,8 @@
   /* ---------------------------------------------------------------------- *
    * State
    * ---------------------------------------------------------------------- */
-  // the season key for the 2026 forecast.  It is not a DES season: there are
-  // no 2026 yield observations, so every value shown under it is a
-  // prediction, and the label says so wherever it appears.
+  // not a DES season: nothing has been observed for it, so it is labelled a
+  // prediction wherever it appears
   var SEASON_2026 = "2026-27";
 
   var state = {
@@ -114,15 +111,14 @@
     yieldChart: document.getElementById("yieldChart"),
     rainTitle: document.getElementById("rainTitle"),
     yieldTitle: document.getElementById("yieldTitle"),
-    modelFacts: document.getElementById("modelFacts"),
-    modelReadoutTitle: document.getElementById("modelReadoutTitle"),
     forecastChart: document.getElementById("forecastChart"),
     forecastTicks: document.getElementById("forecastTicks"),
     forecastLegend: document.getElementById("forecastLegend"),
     forecastFoot: document.getElementById("forecastFoot"),
     forecastOffScale: 0,
     forecastDetail: document.getElementById("forecastDetail"),
-    forecastDetailEmpty: document.getElementById("forecastDetailEmpty"),
+    forecastDetailTitle: document.getElementById("forecastDetailTitle"),
+    forecastReadout: document.getElementById("forecastReadout"),
     forecastDetailBody: document.getElementById("forecastDetailBody"),
     stateSummaryBody: document.querySelector("#stateSummary tbody"),
     stateSummaryNote: document.getElementById("stateSummaryNote"),
@@ -135,32 +131,15 @@
     modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d", "toggleSpikelines"]
   };
 
-  /* ONE hover label style for every chart, and it lives in the LAYOUT, not
-   * in the config: Plotly reads hoverlabel from the layout, and a hoverlabel
-   * in the config is silently ignored.
-   *
-   * Two things are being fixed here.
-   *
-   * 1. THE COLOUR.  Plotly's default takes the label background from the
-   *    trace colour and picks the text colour by its own contrast rule.  On
-   *    a pale series that produces a box nothing else on the page looks
-   *    like, and the text colour is not the page's.
-   *
-   * 2. THE INVISIBLE TEXT.  Plotly sizes the label's box from the text it
-   *    measures, and the text it renders is not always the text it
-   *    measured: the box was being cut for a narrower fallback face while
-   *    the line was drawn in the page's own typeface, so the tail of the
-   *    text spilled out of the box.  On the old blue label that spill was
-   *    WHITE on the cream page - so the reader saw a box with the text
-   *    stopping in the middle of a word.  Naming the face in the layout
-   *    makes the measurement and the drawing agree, and a cream box with
-   *    ink text means that even a spill stays legible.
-   */
+  // One hover label for every chart.  Plotly reads hoverlabel from the
+  // LAYOUT; in the config it is ignored.  Opaque surface plus a shadow, so a
+  // label over the plotted lines still reads as a label and not a hole.
   var HOVER_LABEL = {
     bgcolor: "#fffdf9",
     bordercolor: "#b3ab9b",
+    borderwidth: 1,
     font: {
-      family: "IBM Plex Sans, sans-serif",
+      family: "'IBM Plex Sans', sans-serif",
       size: 11,
       color: "#16181d"
     }
@@ -742,84 +721,6 @@
   /* ---------------------------------------------------------------------- *
    * Model readout
    * ---------------------------------------------------------------------- */
-  function fact(dl, dd, warn) {
-    return "<dt>" + esc(dl) + "</dt><dd" + (warn ? ' class="is-warn"' : "") + ">" + dd + "</dd>";
-  }
-
-  function renderModelFacts() {
-    var m = modelFor(state.crop);
-    var out = "";
-    if (!isModelled(state.crop)) {
-      out += fact("Fitted model", "none for this crop", true);
-      out += fact("District-season observations", fmt(countRows(), 0));
-      out += fact("Yield unit", esc(unitOf(state.crop)));
-      out += fact("Read", "descriptive only — no response curve is fitted for this crop");
-      els.modelFacts.innerHTML = out;
-      return;
-    }
-    // On the 2026 layer the numbers on screen come from THAT crop's own
-    // forecasting model, so the readout describes that model.  On an observed
-    // season it describes the shared Stage-1 fit, as before.
-    if (isForecastSeason() && forecastFor(state.crop)) {
-      els.modelFacts.innerHTML = forecastFacts(state.crop);
-      return;
-    }
-    var s1 = m.stage1;
-    var s2 = m.stage2 || {};
-    var va = m.validation || {};
-    out += fact("Observations", fmt(s1.n_rows, 0) + " district-seasons");
-    out += fact("Rainfall effect (b₁)", fmt(s1.b1, 5) + " per mm");
-    out += fact("Curvature (b₂)", s1.b2.toExponential(2) + "  (p = " + fmt(s1.p2, 3) + ")");
-    if (s1.vertex_reported) {
-      out += fact("Rainfall optimum R*", fmt(s1.vertex_mm, 0) + " mm");
-      var ci = s1.vertex_ci95_mm;
-      if (ci) out += fact("95% CI", fmt(ci[0], 0) + " – " + fmt(ci[1], 0) + " mm");
-    } else {
-      out += fact("Rainfall optimum R*", "not supported", true);
-    }
-    out += fact("R² (Stage 1)", fmt(s1.r2, 3));
-    if (s2.delta_r2 !== undefined) {
-      out += fact("ΔR² (Stage 2)", fmt(s2.delta_r2, 4) +
-        (s2.partial_f_p < 0.05 ? " (significant)" : " (not significant)"),
-        !(s2.partial_f_p < 0.05));
-    }
-    if (va.skill_rmse !== undefined) {
-      out += fact("Skill vs median", fmt(va.skill_rmse, 3), va.skill_rmse <= 0);
-    }
-    els.modelFacts.innerHTML = out;
-  }
-
-  // The facts of the model that produced the 2026 prediction, for one crop.
-  // The specification is written the way it is fitted; the rainfall effect is
-  // restated per 100 mm, which is the unit a reader can hold in their head.
-  function forecastFacts(crop) {
-    var f = forecastFor(crop);
-    var out = "";
-    var per100 = f.b_rain_per_mm * 100;
-    out += fact("2026 model", esc(f.spec_yield_form));
-    out += fact("Estimator", "OLS with district and year fixed effects");
-    out += fact("Rainfall effect", (per100 >= 0 ? "+" : "") + fmt(per100, 4) +
-      " " + esc(f.unit) + " per 100 mm");
-    out += fact("R²", fmt(f.r2, 3));
-    out += fact("Skill vs district median", fmt(f.skill_rmse, 3), !f.beats_baseline);
-    out += fact("Verdict", f.beats_baseline
-      ? "beats the district's own median out of sample"
-      : "does not beat the district's own median — read as 'no evidence of a change'",
-      !f.beats_baseline);
-    if (f.train_seasons && f.train_seasons.length) {
-      out += fact("Fit on", f.train_seasons[0] + " → " + f.train_seasons[f.train_seasons.length - 1] +
-        (f.n_train_rows ? " (" + fmt(f.n_train_rows, 0) + " rows)" : ""));
-    }
-    if (f.test_seasons && f.test_seasons.length) {
-      out += fact("Tested on", f.test_seasons[0] + " → " + f.test_seasons[f.test_seasons.length - 1] +
-        (f.n_test_rows ? " (" + fmt(f.n_test_rows, 0) + " rows)" : ""));
-    }
-    (f.rejected_specs || []).forEach(function (r) {
-      out += fact("Rejected specification", esc(r.spec) + " — " + esc(r.reason), true);
-    });
-    return out;
-  }
-
   function countRows() {
     var rows = panelFor(state.crop, state.season) || [];
     return rows.filter(function (r) { return !!r; }).length;
@@ -878,31 +779,31 @@
 
 
   /* ---------------------------------------------------------------------- *
-   * The 2026 forecast
-   * ---------------------------------------------------------------------- *
-   * ONE chart, up to four crops.  Each crop is forecast by its OWN model -
-   * the one that survived leave-one-season-out cross-validation inside the
-   * fitting period and produced valid yields at 2026's rainfall.
+   * The 2026 forecast.
    *
-   * THE Y AXIS IS INDEXED.  Cotton is measured in bales per hectare and the
-   * other three in tonnes, so four crops cannot share a raw axis.  Each crop
-   * is indexed to its own Telangana average over the fitted period
-   * (2016-17 - 2022-23 = 100), which is the same area-weighted reference the
-   * forecast table uses.  The 2026 endpoint therefore reads directly as the
-   * forecast difference: 100 + the per-cent change against that reference.
+   * Three rules decide how this chart is drawn, and each is stated once here
+   * and once in the foot the reader can see.
    *
-   * THE STATE LINE IS AREA-WEIGHTED: sum(yield x area) / sum(area) over the
-   * districts reporting in that season.  The unweighted median of district
-   * yields is not used - it is not comparable across the 2016
-   * reorganisation, whereas the state aggregate is a state total divided by
-   * a state area and is the same quantity on both sides of the boundary.
+   * The y axis is INDEXED: cotton is in bales per hectare and the rest in
+   * tonnes, so each crop is indexed to its own state average (2016-17 to
+   * 2022-23 = 100).
    *
-   * The x axis is CATEGORICAL: the nine observed seasons, then 2026 as its
-   * own step.  A continuous axis would place 2026 (488 mm state mean, below
-   * every fitted observation) to the LEFT of the record, which reads as
-   * "before 2014" rather than "a prediction for a season that has not
-   * happened yet".
-   */
+   * The state line is AREA-WEIGHTED, sum(yield x area) / sum(area).  The
+   * unweighted mean of district yields is not comparable across the 2016
+   * reorganisation; a state total over a state area is the same quantity on
+   * both sides of it.
+   *
+   * The x axis is CATEGORICAL, nine observed seasons and then 2026 as its own
+   * step: on a continuous axis 2026 would fall to the LEFT of the record,
+   * which reads as "before 2014" rather than as a season yet to happen.
+   * ---------------------------------------------------------------------- */
+
+  // The reading shown before anything is clicked.  Rice, because it is the
+  // one crop whose model beats its own baseline out of sample, so the panel
+  // opens on a prediction that earned the right to be quoted; cotton and
+  // moong are still one click away, and their diamonds carry the negative
+  // skill.
+  var DEFAULT_READING_CROP = "Rice";
 
   // the crops the forecast covers, in the canonical order
   function forecastCrops() {
@@ -1034,8 +935,10 @@
     var all = forecastCrops();
     if (!all.length) {
       els.forecastChart.innerHTML = "";
-      els.forecastFoot.textContent =
-        "The 2026 forecast has not been computed in this build.";
+      els.forecastFoot.innerHTML =
+        '<p class="forecast-foot__item">The 2026 forecast has not been ' +
+        'computed in this build.</p>';
+      setForecastSplit(false);
       return;
     }
 
@@ -1043,6 +946,18 @@
     drawForecastChart();
     renderForecastLegend();
     renderForecastFoot();
+
+    // keep whatever is being read across a re-render (a crop tick changes
+    // the chart, not the reading); on the first render, show the default
+    if (!state.forecastPoint) {
+      if (fc[DEFAULT_READING_CROP]) showForecastCrop(DEFAULT_READING_CROP);
+      else showForecastCrop(all[0]);
+    } else if (state.forecastPoint.slug) {
+      showForecastPoint(state.forecastPoint.crop, state.forecastPoint.slug);
+    } else {
+      showForecastCrop(state.forecastPoint.crop);
+    }
+
     renderStateSummary();
   }
 
@@ -1290,7 +1205,7 @@
     }
     items.push(
       '<span class="forecast-legend__item"><span class="forecast-legend__line"></span>' +
-      'state yield per hectare (area-weighted)</span>'
+      'Telangana yield per hectare</span>'
     );
     items.push(
       '<span class="forecast-legend__item"><span class="forecast-legend__dot"></span>' +
@@ -1311,52 +1226,90 @@
       esc(names) + '</span>' + items.join("");
   }
 
+  // The explanation under the chart.  Four headed items rather than one
+  // paragraph: a reader who wants the axis rule should not have to read the
+  // skill scores to find it.
   function renderForecastFoot() {
     var meta = D.forecast_meta || {};
     var crops = tickedCrops();
-    var parts = [];
+    var items = [];
 
-    parts.push(
-      "Every crop is indexed to its own Telangana average over the fitted period " +
-      "(2016-17 → 2022-23 = 100), so cotton in bales per hectare and the other " +
-      "crops in tonnes per hectare can share one axis. The state line is " +
-      "area-weighted — sum of area × yield ÷ sum of area over the districts " +
-      "reporting in that season — not the unweighted mean of district yields."
+    items.push(
+      footItem("How to read the axis",
+        "Each crop is indexed to its own Telangana average over the fitted " +
+        "period (2016-17 → 2022-23 = 100). Cotton is measured in bales per " +
+        "hectare and the other three in tonnes, which is how four crops " +
+        "share one axis. The dotted line is 100; the vertical dotted rule " +
+        "marks the 2016 reorganisation, after which the districts are not " +
+        "the same units as before it.")
     );
 
-    parts.push(
-      "The 2026 segment is a prediction from that crop's own model, not an " +
-      "observation, and it is drawn dashed because nothing has been observed " +
-      "for it. " +
-      (meta.area_baseline_note || "")
+    items.push(
+      footItem("The state line",
+        "Area-weighted — total yield ÷ total area over the districts " +
+        "reporting that season — not the unweighted mean of district yields, " +
+        "which would weigh a 720 ha district like a 129,633 ha one.")
+    );
+
+    items.push(
+      footItemWide("The 2026 segment",
+        "A prediction from that crop's own model, drawn dashed because " +
+        "nothing has been observed for it. " + (meta.area_baseline_note || ""))
     );
 
     var skills = crops.map(function (c) {
       var f = (D.forecast || {})[c];
-      if (!f) return null;
-      return cropTitle(c) + " " + (f.skill_rmse > 0 ? "+" : "") +
-        f.skill_rmse.toFixed(3);
+      if (!f) return "";
+      var cls = f.skill_rmse < 0 ? " forecast-foot__skill--down"
+                                 : " forecast-foot__skill--up";
+      return '<div class="forecast-foot__skill' + cls + '"><span>' +
+        esc(cropTitle(c)) + "</span><span>" +
+        (f.skill_rmse > 0 ? "+" : "") + f.skill_rmse.toFixed(3) +
+        "</span></div>";
     }).filter(Boolean);
+
     if (skills.length) {
-      parts.push(
-        "Out-of-sample skill against the district-median baseline: " +
-        skills.join(" · ") + ". A negative skill means the model does not beat " +
-        "the baseline, so its prediction is read as no evidence of a change " +
-        "rather than as a forecast."
+      items.push(
+        footItem("How well the model does",
+          '<dl>' + skills.join("") + "</dl>" +
+          "<p>Out of sample, against the district's own median. A negative " +
+          "score means the model loses to that median, so read the prediction " +
+          "as no evidence of a change.</p>")
       );
     }
 
     if (els.forecastOffScale) {
-      parts.push(
-        els.forecastOffScale + " district observation(s) fall outside the plotted " +
-        "range and are not drawn. The scale is set by the state line, the 2026 " +
-        "prediction and the 2nd-to-98th percentile of the district observations, " +
-        "so that one delivered value cannot flatten the chart; every observation " +
-        "is in the table below."
+      items.push(
+        footItem("Not drawn",
+          els.forecastOffScale + " district observation(s) fall outside the " +
+          "plotted range and are not shown here. The scale is set by the " +
+          "state line, the 2026 prediction and the 2nd-to-98th percentile of " +
+          "the district observations, so that one delivered value cannot " +
+          "flatten the chart. Every observation is in the CSV export.")
       );
     }
 
-    els.forecastFoot.textContent = parts.join(" ");
+    els.forecastFoot.innerHTML = items.join("");
+  }
+
+  function footItem(title, body) {
+    return footItemEl("", title, body);
+  }
+
+  function footItemWide(title, body) {
+    return footItemEl(" forecast-foot__item--wide", title, body);
+  }
+
+  function footItemEl(mod, title, body) {
+    return '<div class="forecast-foot__item' + mod + '">' +
+      '<h3 class="forecast-foot__title">' + esc(title) + "</h3>" + body + "</div>";
+  }
+
+  // The row is one column until the reading has something to say, so an empty
+  // panel does not leave a blank column beside the explanation.
+  function setForecastSplit(on) {
+    if (!els.forecastReadout) return;
+    els.forecastReadout.classList.toggle("forecast-readout--split", !!on);
   }
 
   /* ---------------------------------------------------------------------- *
@@ -1452,8 +1405,11 @@
     if (!row) return;
     state.forecastPoint = { crop: crop, slug: slug };
 
-    els.forecastDetailEmpty.hidden = true;
-    els.forecastDetailBody.hidden = false;
+    if (els.forecastDetailTitle) {
+      els.forecastDetailTitle.textContent =
+        cropTitle(crop) + " · " + districtLabel(slug);
+    }
+    setForecastSplit(true);
 
     // the district's own observed history, so the point can be read against
     // that district's own norm rather than the state's
@@ -1505,8 +1461,10 @@
     var st = f.state;
     state.forecastPoint = { crop: crop, slug: null };
 
-    els.forecastDetailEmpty.hidden = true;
-    els.forecastDetailBody.hidden = false;
+    if (els.forecastDetailTitle) {
+      els.forecastDetailTitle.textContent = cropTitle(crop) + " · 2026-27 prediction";
+    }
+    setForecastSplit(true);
 
     var rejected = (f.rejected_specs || []).length
       ? " The best-scoring specification was rejected for this crop: it returns " +
@@ -1598,16 +1556,8 @@
       '<span class="icon icon--yield" aria-hidden="true"></span>' +
       esc(cropTitle(state.crop)) + " yield";
 
-    // the readout describes whichever model produced the numbers on screen
-    if (els.modelReadoutTitle) {
-      els.modelReadoutTitle.innerHTML =
-        '<span class="icon icon--model" aria-hidden="true"></span>' +
-        (isForecastSeason() ? "2026 forecast model" : "Model readout");
-    }
-
     bandAndLine(els.rainChart, state.crop, "rain");
     bandAndLine(els.yieldChart, state.crop, "yield");
-    renderModelFacts();
   }
 
   function cropTitle(crop) {
@@ -1719,17 +1669,9 @@
     });
     els.csv.addEventListener("click", exportCsv);
 
-    // --- font gate ---------------------------------------------------------
-    // The webfonts are self-hosted with font-display: swap, so the browser
-    // paints with a fallback face first and swaps in IBM Plex a moment
-    // later.  Plotly measures an annotation's text at render time and sizes
-    // the background box to that measurement, so a chart drawn before the
-    // real font arrives gets a box sized for the FALLBACK metrics - and the
-    // text then overflows its own box once the font swaps in.
-    //
-    // So: wait for the fonts, then render.  The timeout is a safety net so a
-    // font that never arrives still produces a page, and a second pass
-    // re-renders if the fonts settle after the first draw.
+    // Plotly sizes a label's box to the face it measures with, so drawing
+    // before the webfont arrives boxes the text for a fallback face.  Wait
+    // for the fonts; the timeout is only a safety net.
     var fontsReady = (document.fonts && document.fonts.ready)
       ? Promise.race([
           document.fonts.ready,

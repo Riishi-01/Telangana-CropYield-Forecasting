@@ -49,6 +49,18 @@ __pycache__/
 #   data/manifests/   fetch_manifest.json, checksums.sha256, BLOCKERS.md
 #   data/geo/         districts.csv, districts.geojson, PARTITION_NOTE.md
 #   DATA_VERSION
+#   figures/          the published F1-F7, cited by README section 6
+#   dashboard/data/   the served bundle; the page opens from disk with no build
+#   plan/ERRATA.md, plan/SRS.md, plan/GUIDE.md
+#                     the decision record, the spec and the setup guide.
+#                     They are read by a person, not by a test, but they are
+#                     the only place the C1-C15 decisions exist.
+
+# ---------------------------------------------- Working notes (C16)
+# The improvement plan is a historical record of work that is now done: every
+# row in it reads "Done".  It is kept in the working tree and out of the
+# published history, alongside the other scratch patterns below.
+/plan/IMPROVEMENT_PLAN.md
 
 # Stray spreadsheet lock files from Excel/Numbers on macOS
 ~$*
@@ -81,6 +93,25 @@ scratch/
 *.bak
 *.swp
 .~*.swx
+
+# ------------------------------------------------- Stray files and scratch
+# Editor and shell droppings that have no business in a published tree.
+core
+core.*
+*.orig
+*.rej
+*.swx
+*.log.[0-9]
+/*.bak
+/.DS_Store
+**/.DS_Store
+._*
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.cache/
+.cache
 
 # Large generated binaries anywhere (belt-and-braces; normally already
 # excluded by the /data/ rules above)
