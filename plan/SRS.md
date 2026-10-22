@@ -150,11 +150,18 @@ of parents into children exists.**
 **Required action:** the implementing agent MUST resolve this before any parent aggregation
 is written. See GUIDE.md Step 2.
 
-**RESOLVED (ERRATA C4):** the 2016 reorganisation is **not** a clean partition, so
-Tier 2 parent reconstruction is **BLOCKED**. The delivered file also contains no
-pre-2016 parent-level data to reconstruct from. The verdict, the sources consulted and
-the reasoning are recorded in `data/geo/PARTITION_NOTE.md`. Tier 1 proceeds with
-era-tagged district ids only.
+**RESOLVED (ERRATA C4):** a district division is **zero-sum** — when an undivided
+district *x* was divided into *y* and *z* in 2016, *x = y + z*, so a parent-level
+figure for a post-2016 season is `sum(production_children) / sum(area_children)`.
+The children take the parent's name or a new one, and the dataset reports them
+individually. The reconstruction is **not attempted** — Suryapet was formed from parts
+of two parents (Khammam and Nalgonda), so those parents cannot be rebuilt from the
+children the dataset names, and it is unnecessary because era-tagged fixed effects
+keep pre- and post-2016 districts apart. An area-based check of the zero-sum property
+was attempted and was inconclusive (residuals +65 % to −70 %, swamped by crop choice),
+so the zero-sum status is taken as a fact of the reorganisation rather than a
+measurement. Full reasoning: `data/geo/PARTITION_NOTE.md`. Tier 1 proceeds with
+era-tagged district ids.
 
 **Interim design that sidesteps the constraint:** treat pre-2016 and post-2016 as
 **distinct district entities** (era-tagged IDs, §4.4). This requires no partition, no

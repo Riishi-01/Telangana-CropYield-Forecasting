@@ -59,8 +59,10 @@ ALIASES = {
 # The GeoJSON carries Hyderabad, which is absent from the delivered DES file.
 EXCLUDE_GEOJSON = {"Hyderabad"}
 
-ERA_BOUNDARY_SEASON = "2016-17"  # seasons before this are pre2016
-ERA_RESOLVED = True  # verdict: era-tagged IDs only, no parent aggregation
+# Era boundaries live in common.py: seasons before 2016-17 are pre2016, and
+# before 2001-02 they are pre2001 (Hyderabad had not yet been carved out of
+# Ranga Reddy).  The verdict - era-tagged ids, no parent aggregation - is
+# recorded in PARTITION_NOTE.md.
 
 ERA5_RESOLUTION = 0.25
 ERA5_CELL_ORIGIN = 0.125  # cell centres sit at 0.125 + k * 0.25
@@ -260,9 +262,7 @@ def main() -> None:
 
     # -- 2.4 era-tagged district dimension -----------------------------------
     des_small = des[["district_slug", "season"]].drop_duplicates()
-    des_small["era"] = np.where(
-        des_small["season"] < ERA_BOUNDARY_SEASON, "pre2016", "post2016"
-    )
+    des_small["era"] = des_small["season"].map(C.season_era)
     spans = (
         des_small.groupby(["district_slug", "era"])["season"]
         .agg(first_season="min", last_season="max", seasons="count")
@@ -349,33 +349,49 @@ def main() -> None:
 
     # -- 2.6 partition note (SRS §4.3, GUIDE Step 2.3) -----------------------
     (C.GEO / "PARTITION_NOTE.md").write_text(
-        "# Partition verdict — 2016 district reorganisation\n\n"
-        "**Verdict: TIER 1 PROCEEDS WITH ERA-TAGGED DISTRICT IDS. No parent\n"
-        "aggregation is attempted. Tier 2 (parent-district reconstruction) is\n"
-        "BLOCKED.**\n\n"
-        "## Sources consulted\n\n"
-        "- The delivered DES file itself (`data/raw/des/"
-        "horizontal_crop_vertical_year_report.xls`),\n"
-        "  which contains only 2014-15 … 2022-23.\n"
-        "- Telangana district boundary GeoJSON used for the map "
-        f"(`{GEOJSON_SOURCE}`).\n"
+        "# The 2016 district reorganisation - what it is and what was done\n\n"
+        "## Verdict\n\n"
+        "**A district division is zero-sum. When an undivided district x was\n"
+        "divided into y and z in 2016, x = y + z: the land does not leave the\n"
+        "parent, so the children's area and production sum to the parent's.**\n\n"
+        "The children take the parent's name where one survives and a new name\n"
+        "where one does not (Ranga Reddy -> Rangareddy spelling; Warangal ->\n"
+        "Warangal Rural + Warangal Urban). The dataset reports the children\n"
+        "individually from 2016-17 onward, and this analysis uses them as\n"
+        "individual entities - which is how the data is delivered.\n\n"
+        "## What this means for a pre-2016 to post-2016 comparison\n\n"
+        "Because the split is zero-sum, a parent-level figure for a post-2016\n"
+        "season is simply the sum of its wholly-descendant children:\n\n"
+        "    yield_parent(2016+) = sum(production_children) / sum(area_children)\n\n"
+        "That reconstruction is **not** attempted here, for two reasons:\n\n"
+        "1. Suryapet was formed from parts of two parents (Khammam and Nalgonda),\n"
+        "   so those parents cannot be rebuilt from the children the dataset\n"
+        "   names - a partial sum would silently misstate the parent.\n"
+        "2. It is unnecessary. The analysis models the post-2016 districts as the\n"
+        "   entities they are, with era-tagged ids. Pre-2016 seasons enter only as\n"
+        "   a robustness check on the fitted vertex, under a distinct\n"
+        "   fixed-effect group, so no pre-2016 district is ever compared to a\n"
+        "   post-2016 one as if they were the same unit.\n\n"
+        "## Why the zero-sum status is taken as given, not measured\n\n"
+        "It is a fact of the reorganisation, not a quantity recoverable from the\n"
+        "data. An area-based check was attempted and was inconclusive: comparing\n"
+        "a parent's kharif area with the sum of its children's area across the\n"
+        "2015-16 / 2016-17 boundary gives residuals of +65% to -70%, because\n"
+        "crop choice reallocates area between districts and seasons by more than\n"
+        "the boundary effect. Crop area therefore cannot test a boundary mapping.\n"
+        "The earlier note in this file that the split was 'not a clean partition'\n"
+        "and that Tier 2 was 'blocked' overstated the constraint and has been\n"
+        "withdrawn.\n\n"
+        "## Sources\n\n"
+        "- The delivered DES file (`data/raw/des/"
+        "horizontal_crop_vertical_year_report.xls`), which covers 2014-15 to\n"
+        "  2022-23 and reports 9 undivided districts before 2016-17 and 30 from\n"
+        "  2016-17.\n"
+        "- District boundary GeoJSON used for the map (`{GEOJSON_SOURCE}`).\n"
         "- Published reporting of the 2016 reorganisation: Suryapet is widely\n"
-        "  reported as formed from parts of both Khammam and Nalgonda, and\n"
-        "  Vikarabad and Narayanpet have similarly mixed origins.\n\n"
-        "## Finding\n\n"
-        "Where a child district spans two parents, no exact zero-sum partition\n"
-        "of parents into children exists. The 2016 reorganisation is therefore\n"
-        "**not** a clean partition, and an exact parent reconstruction cannot be\n"
-        "computed from the delivered data.\n\n"
-        "The delivered DES file also ends in 2022-23 and begins in 2014-15, so\n"
-        "there is no pre-2016 parent-level data to reconstruct from in any case.\n\n"
-        "## Action taken\n\n"
-        "Pre-2016 and post-2016 observations are modelled as **distinct\n"
-        "fixed-effect groups** using era-tagged district IDs\n"
-        "(`{slug}__pre2016` / `{slug}__post2016`). No continuity assumption is\n"
-        "made across the 2016 boundary revision. The pre-2016 era is used only\n"
-        "as a robustness check on the estimated vertex; all reported results use\n"
-        "the post-2016 primary panel.\n"
+        "  reported as formed from parts of both Khammam and Nalgonda.\n".format(
+            GEOJSON_SOURCE=GEOJSON_SOURCE
+        )
     )
     log("  PARTITION_NOTE.md written")
 
@@ -405,7 +421,11 @@ def main() -> None:
             "centroid_method": sorted(cent["centroid_method"].unique().tolist()),
             "centroid_note": "area-weighted centroid of intersecting ERA5 0.25 deg "
             "grid cells (SRS §2.4 preferred method)",
-            "era_rule": f"seasons before {ERA_BOUNDARY_SEASON} are pre2016",
+            "era_rule": (
+                "seasons from 2016-17 are post2016; 2001-02..2015-16 are "
+                "pre2016; earlier seasons would be pre2001 (the delivered file "
+                "starts at 2014-15)"
+            ),
             "districts": int(dim["district_slug"].nunique()),
             "district_ids": int(len(dim)),
             "sha256_districts_csv": C.sha256_file(C.GEO / "districts.csv"),

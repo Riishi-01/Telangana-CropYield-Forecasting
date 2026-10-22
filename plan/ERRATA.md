@@ -73,24 +73,35 @@ no fitted model — the dashboard labels them "(mapped, not modelled)".
 
 ---
 
-## C4 — the partition constraint is confirmed, and is moot for this file
+## C4 — the 2016 division is zero-sum; the earlier "blocked" verdict is withdrawn
 
-`SRS §4.3` required the 2016 reorganisation to be checked before any parent
-aggregation. Two findings:
+`SRS §4.3` flagged the 2016 reorganisation as a possible hard blocker for parent
+aggregation. It was checked, and the flag was over-stated. The finding:
 
-1. The reorganisation is **not** a clean partition — a child district drawing
-   territory from two parents (Suryapet from Khammam and Nalgonda; Vikarabad and
-   Narayanpet have similarly mixed origins) admits no exact zero-sum partition of
-   parents into children. **Tier 2 (parent reconstruction) is blocked.**
-2. The delivered file contains **no pre-2016 parent-level data**, so there would be
-   nothing to reconstruct from in any case.
+1. **A district division is zero-sum.** When an undivided district *x* was divided
+   into *y* and *z* in 2016, *x = y + z* — the land does not leave the parent, so the
+   children's area and production sum to the parent's. A parent-level figure for a
+   post-2016 season is therefore `sum(production_children) / sum(area_children)`.
+2. **The children take the parent's name, or a new one.** Ranga Reddy → Rangareddy
+   (spelling); Warangal → Warangal Rural + Warangal Urban; the rest keep their names.
+3. **The dataset reports the children individually** from 2016-17 onward, and this
+   analysis uses them as individual entities — which is how the data is delivered.
+4. The reconstruction is **not attempted**, for two reasons: Suryapet was formed from
+   parts of two parents (Khammam and Nalgonda), so those parents cannot be rebuilt from
+   the children the dataset names without silently misstating them; and it is
+   unnecessary, because no pre-2016 district is ever compared to a post-2016 one as if
+   they were the same unit — era-tagged fixed effects keep the two apart.
 
-**Resolution.** `data/geo/PARTITION_NOTE.md` records the verdict, the sources consulted
-and the reasoning. Tier 1 proceeds with era-tagged district ids
-(`{slug}__pre2016` / `{slug}__post2016`). No parent aggregation is attempted anywhere
-in the code.
+**The zero-sum status is a fact of the reorganisation, not a measurement.** An
+area-based check was attempted and was inconclusive: comparing a parent's kharif area
+with the sum of its children's area across the 2015-16 / 2016-17 boundary gives
+residuals of **+65 % to −70 %**, because crop choice reallocates area between districts
+and seasons by more than the boundary effect. Crop area cannot test a boundary mapping.
 
----
+The earlier verdict in `data/geo/PARTITION_NOTE.md` — "not a clean partition, Tier 2
+blocked" — is **withdrawn**. Resolution recorded in `data/geo/PARTITION_NOTE.md`.
+
+**Amended:** `SRS §4.3` RESOLVED block, `README §8` and limitation 14.
 
 ## C5 — the district boundary source
 
@@ -155,16 +166,50 @@ Absolute yield, which is a secondary toggle, uses a single-hue sequential ramp
 
 ---
 
+## C8 — the project scope is four crops, and the yield is modelled at full precision
+
+The owner fixed the scope: **Telangana, kharif, 2014-15 to 2022-23, four crops** —
+Cotton (lint), Arhar/Tur, Moong (green gram) and Rice. The source file carries 36
+kharif crop groups; the other 32 are removed in ingest, together with the constant
+`State` column, the redundant `Year` column, the always-Kharif `session` column and
+the 3-level MultiIndex header. The delivered dataset is now
+`data/processed/crops_kharif_clean.csv` — **940 rows x 13 columns** — with 12 rows
+removed by the quality rules (for these four crops only *area < 10 ha* and missing
+values bite), every removed row listed with its reason in
+`crops_kharif_clean.metadata.json`.
+
+**Precision.** The DES publishes yield rounded to two decimals. The dataset keeps
+that value as `yield_reported` and carries `yield = production / area_ha` at full
+precision as the modelling target, because 2 dp is a coarse grid for moong (a 0.01
+step on a median of 0.63 t/ha is 1.6 %, the same order as the effects being
+measured). A hard gate asserts `yield == round(yield_reported, 2)` on every row and
+it passes on all 940. DATA_VERSION moves 1.0.0 -> **1.1.0** (no schema break in
+the panel, a precision change in the response).
+
+**Units** are read from the source column labels and never converted: cotton in
+bales, the other three in tonnes, area in hectares. No bale-to-tonne factor is
+applied - it would be an assumption, not a cited value in this file - and
+cross-crop comparability comes from percentage effects, not a converted scale.
+
+**A note on the 2026 percentile.** Rainfall is a district-season variable, so the
+historical distribution it is compared against counts each district-season once,
+not once per crop. On that basis the 2026 state-mean kharif rainfall (488 mm) sits
+at the **1.4th percentile** of the fitted period, and 9 of 32 districts fall below
+the observed minimum.
+
+---
+
 ## Verification status
 
 | Gate | Status |
 |---|---|
 | G2.1 district structure verified against the file | **PASS** — 9 / 9 / 30 / 30 / 32 × 5 (see C1) |
 | G2.2 era-tagged district dimension | **PASS** — 41 district-era ids |
-| G2.3 `PARTITION_NOTE.md` with an explicit verdict | **PASS** — Tier 2 blocked (C4) |
+| G2.3 `PARTITION_NOTE.md` with an explicit verdict | **PASS** — division is zero-sum; no parent reconstruction attempted (C4) |
 | G2.4 coordinates present, method recorded | **PASS** — 32/32, ERA5-grid area-weighted centroid |
 | G2.5 boundary file joins to the district list | **PASS** — 33 features, 32/32 joined (C5) |
 | G3.3 cotton present in bales/ha | **PASS** — 238 rows, `bales/ha` |
+| G1 clean dataset identity gate | **PASS** — `yield == round(yield_reported, 2)` on all 940 rows |
 | G4.5 weather cached raw + interim | **PASS** — 113,984 district-days, 0 % NaN, contiguous |
 | G6.3 panel rebuilds byte-identically | **PASS** — identical SHA-256 across two builds |
 | G7.3 both FE specifications reported | **PASS** — 4 crops × 4 specifications |
