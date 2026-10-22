@@ -1,0 +1,30 @@
+{
+  "analysis_window": [
+    "06-01",
+    "09-30"
+  ],
+  "artifact": "features.parquet",
+  "created_utc": "2026-10-22T00:28:30+00:00",
+  "districts": 32,
+  "dry_spell_window": [
+    "06-01",
+    "10-31"
+  ],
+  "heat_day_threshold_c": 35.0,
+  "rain_day_definition": "WMO standard (>= 0.1 inch / 2.5 mm)",
+  "rain_day_threshold_mm": 2.5,
+  "rows": 320,
+  "seasons": [
+    "2014-15",
+    "2015-16",
+    "2016-17",
+    "2017-18",
+    "2018-19",
+    "2019-20",
+    "2020-21",
+    "2021-22",
+    "2022-23",
+    "2023-24"
+  ],
+  "sha256": "057fa98c2688b131016d61770330e4085a5c5e3c4f9b8f0e422f8689250ce16b"
+}

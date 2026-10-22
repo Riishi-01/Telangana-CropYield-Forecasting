@@ -189,6 +189,27 @@ class FetchError(RuntimeError):
     pass
 
 
+def _retry_delay(code: str, body: str, attempt: int, pause: float) -> float:
+    """Seconds to wait before the next attempt.
+
+    HTTP 429 from the Open-Meteo archive API is a *quota* signal, not a
+    transient error.  The free tier answers with
+    {"reason": "Hourly API request limit exceeded. Please try again in the next
+    hour."}, so the correct response is to wait for the top of the next hour
+    rather than to hot-loop.  A shorter generic 429 (no hourly wording) gets
+    a 60 s cooldown.  Everything else gets a linear backoff of 5 s, 10 s, ...
+    """
+    if code == "429":
+        if "hour" in (body or "").lower():
+            now = datetime.now(timezone.utc)
+            nxt = now.replace(minute=0, second=0, microsecond=0)
+            nxt = nxt.replace(hour=(nxt.hour + 1) % 24)
+            wait = max(60.0, (nxt - now).total_seconds() + 30)
+            return min(wait, 3600.0)
+        return 60.0
+    return pause * attempt
+
+
 def fetch(url: str, tries: int = 8, timeout: int = 60, pause: float = 5.0) -> dict:
     """GET a JSON document via curl, retrying transient failures.
 
@@ -218,11 +239,7 @@ def fetch(url: str, tries: int = 8, timeout: int = 60, pause: float = 5.0) -> di
         if attempt == tries:
             break
 
-        if code == "429":
-            # Shared rate-limit cooldown. Do NOT hot-loop on a 429.
-            wait = 60
-        else:
-            wait = pause * attempt  # 5, 10, 15, ... seconds
+        wait = _retry_delay(code, body, attempt, pause)
         log(
             f"    fetch attempt {attempt}/{tries} failed (HTTP {code}"
             f"{'; ' + last_err if last_err else ''}) -> sleeping {wait:.0f}s"
@@ -252,7 +269,7 @@ def curl_text(url: str, tries: int = 8, timeout: int = 60, pause: float = 5.0) -
         last_err = (proc.stderr or "").strip()[:200]
         if attempt == tries:
             break
-        wait = 60 if code == "429" else pause * attempt
+        wait = _retry_delay(code, body, attempt, pause)
         log(
             f"    fetch attempt {attempt}/{tries} failed (HTTP {code}"
             f"{'; ' + last_err if last_err else ''}) -> sleeping {wait:.0f}s"

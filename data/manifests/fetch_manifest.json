@@ -1,0 +1,95 @@
+{
+  "analysis_window": [
+    "06-01",
+    "09-30"
+  ],
+  "artifact": "panel_v1.0.0.parquet",
+  "centroid_method": [
+    "era5_grid_area_weighted_centroid"
+  ],
+  "created_utc": "2026-10-22T00:29:00+00:00",
+  "crops": [
+    "Arhar/Tur",
+    "Bajra",
+    "Banana",
+    "Cashewnut",
+    "Castor seed",
+    "Coriander",
+    "Cotton(lint)",
+    "Cowpea(Lobia)",
+    "Dry chillies",
+    "Ginger",
+    "Gram",
+    "Groundnut",
+    "Horse-gram",
+    "Jowar",
+    "Maize",
+    "Moong(Green Gram)",
+    "Oilseeds total",
+    "Onion",
+    "Other Kharif pulses",
+    "Potato",
+    "Ragi",
+    "Rice",
+    "Safflower",
+    "Sesamum",
+    "Small millets",
+    "Soyabean",
+    "Sugarcane",
+    "Sunflower",
+    "Sweet potato",
+    "Tobacco",
+    "Turmeric",
+    "Urad",
+    "Wheat",
+    "other oilseeds"
+  ],
+  "data_version": "1.0.0",
+  "districts": 32,
+  "dry_spell_window": [
+    "06-01",
+    "10-31"
+  ],
+  "extended_panel": [
+    "2014-15",
+    "2022-23"
+  ],
+  "geojson_sha256": "e228271e9929f7167bc1327f0b0faba5c17fb94dc999ac9c026293b4e9dfd1e1",
+  "geojson_source_url": "https://raw.githubusercontent.com/gpavanb1/Telangana-Visualisation/master/data/Telangana.geojson",
+  "modelled_crops": [
+    "Cotton(lint)",
+    "Arhar/Tur",
+    "Moong(Green Gram)",
+    "Rice"
+  ],
+  "primary_panel": [
+    "2016-17",
+    "2022-23"
+  ],
+  "pythonhashseed": "0",
+  "rows": 3185,
+  "rows_primary_panel": 2867,
+  "seed": 0,
+  "sha256": "c35be46fbad21406c8aeccc7dfeaaa0acf85585377b06f4a212e90f1e061eddd",
+  "temp_window": [
+    "2014-06-01",
+    "2023-10-31"
+  ],
+  "test_seasons": [
+    "2020-21",
+    "2022-23"
+  ],
+  "train_seasons": [
+    "2016-17",
+    "2019-20"
+  ],
+  "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
+  "weather_fetched_utc": "2026-10-22T00:28:03+00:00",
+  "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
+  "weather_rows": 110080,
+  "weather_sha256": "d0b63f0afc1f32b4ac6fe767bf5a4c865715eddeff0aa03e4b37c92f7d214157",
+  "weather_source": "open-meteo/era5",
+  "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
+  "yield_rows": 3185,
+  "yield_source": "DES district-wise season-wise crop production (Govt. of India)"
+}
