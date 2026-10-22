@@ -32,8 +32,6 @@ function run(d, w) {
   }
 
   results.defaultFacts = txt(d.getElementById("modelFacts"));
-  results.disclaimerVisible = !d.getElementById("markerDisclaimer").hidden;
-  results.disclaimer = txt(d.getElementById("markerDisclaimer"));
 
   // the DEFAULT state: the map opens on the 2026 prediction, cotton, and
   // absolute yield
@@ -108,7 +106,6 @@ function run(d, w) {
   results.mapLabels = d.querySelectorAll("#map .district-label").length;
   results.statsPlot = d.querySelectorAll("#statsChart svg").length;
   results.statsBars = d.querySelectorAll("#statsChart .barlayer path").length;
-  results.disclosureItems = d.querySelectorAll("#disclosureList li").length;
 
   // the window-sensitivity panel
   results.windowHeadCells = d.querySelectorAll("#windowTable thead th").length;
@@ -216,28 +213,52 @@ function run(d, w) {
   results.arharOn = d.querySelectorAll("#forecastTicks .forecast-tick--on").length;
   if (allTick) allTick.click();
 
-  /* ── the 2026 forecast table ─────────────────────────────────────────── */
+  /* ── the retired sections ────────────────────────────────────────────── */
 
-  results.forecastTableRows = d.querySelectorAll("#forecastTable tbody tr[data-slug]").length;
-  results.forecastTableHeaders = d.querySelectorAll("#forecastTable thead th").length;
-  results.forecastDiffDown = d.querySelectorAll("#forecastTable .diff-cell--down").length;
-  results.forecastDiffUp = d.querySelectorAll("#forecastTable .diff-cell--up").length;
-  results.forecastSignsPrinted = Array.prototype.every.call(
-    d.querySelectorAll("#forecastTable .diff-cell"),
-    function (c) { return /[+-]/.test(c.textContent); }
+  results.forecastDistrictTablePresent = !!d.getElementById("forecastTable");
+  results.disclosureListPresent = !!d.getElementById("disclosureList");
+  results.colophonPresent = !!d.querySelector("footer.colophon");
+  results.disclaimerBoxPresent = !!d.getElementById("markerDisclaimer");
+  results.forecastTableHead = txt(d.getElementById("forecastTableHead"));
+  results.summaryDeltasDown = d.querySelectorAll(
+    "#stateSummary .diff-cell--down"
+  ).length;
+  results.summaryDeltasUp = d.querySelectorAll(
+    "#stateSummary .diff-cell--up"
+  ).length;
+  results.summarySignsPrinted = Array.prototype.every.call(
+    d.querySelectorAll("#stateSummary .state-summary__delta"),
+    function (c) { return /[\u2191\u2193]/.test(c.textContent); }
   );
-  results.forecastTableSubtitle = txt(d.getElementById("forecastTableSubtitle"));
-  results.forecastTableFoot = txt(d.getElementById("forecastTableFoot"));
 
   /* ── the point-description panel ─────────────────────────────────────── */
 
   results.detailPanelPresent = !!d.getElementById("forecastDetailBody");
   results.detailFields = 0;
-  var frow = d.querySelector("#forecastTable tbody tr[data-slug]");
-  if (frow) {
-    frow.click();
-    results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
+  // the 2026 diamond on the forecast chart opens the reading; the district
+  // table that used to do it is retired
+  // The 2026 diamond on the forecast chart opens the reading.  The district
+  // table that used to do it is retired, so the trigger is the chart: the
+  // real hover machinery is asked for the 2026 point, and the click event
+  // Plotly emits on a click is emitted with that hover data.
+  var gd = d.getElementById("forecastChart");
+  var w = frame.contentWindow;
+  var curve = -1, pIdx = -1;
+  (gd.data || []).forEach(function (tr, i) {
+    if (curve < 0 && tr.marker && tr.marker.symbol === "diamond") {
+      curve = i;
+      pIdx = (tr.x || []).indexOf("2026-27");
+    }
+  });
+  results.detailCurve = curve;
+  if (curve >= 0 && w.Plotly && w.Plotly.Fx && gd.emit) {
+    w.Plotly.Fx.hover(gd, [{ curveNumber: curve, pointNumber: pIdx }]);
+    if (gd._hoverdata) {
+      gd.emit("plotly_click", { points: gd._hoverdata, event: null });
+    }
   }
+  results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
+  results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
   results.detailHasRainfall = d.getElementById("forecastDetailBody")
     ? /rainfall/.test(d.getElementById("forecastDetailBody").textContent) : false;
   results.detailHasAreaBaseline = d.getElementById("forecastDetailBody")
@@ -253,7 +274,7 @@ var iv = setInterval(function () {
     if (d && d.getElementById("forecastChart") &&
         d.querySelectorAll("#forecastChart svg.main-svg").length > 0 &&
         d.querySelectorAll("#forecastTicks .forecast-tick").length > 0 &&
-        d.querySelectorAll("#forecastTable tbody tr[data-slug]").length > 0) {
+        d.querySelectorAll("#stateSummary tbody tr").length > 0) {
       clearInterval(iv);
       run(d, frame.contentWindow);
     } else if (tries > 300) {

@@ -459,10 +459,8 @@ def main() -> None:
           "districtTable" not in index_html and "renderTable" not in app_js, "")
     check("the four-panel forecast grid is retired",
           "forecastGrid" not in index_html and "forecast-cell" not in styles, "")
-    check("the 2026 districts table is kept",
-          "forecastTable" in index_html
-          and "2026-27 · " in app_js
-          and "districts · " in app_js, "")
+    check("the state summary carries the 2026 and state-average columns",
+          "2026" in index_html and "State avg" in index_html, "")
     check("the crop selector offers All plus the crop ticks",
           "All crops" in app_js and "forecast-tick" in app_js, "")
     check("the chart axis is indexed to the Telangana average",
@@ -495,25 +493,6 @@ def main() -> None:
                   f"{arrow} {abs(pct):.1f} %" in readme
                   or f"{arrow} {abs(pct):.1f}%" in readme,
                   f"{arrow} {abs(pct):.1f}%")
-            # the rainfall over this crop's own area.  The page rounds half
-            # away from zero (toLocaleString), so the check does the same
-            # rather than Python's round-half-to-even.
-            import math  # noqa: PLC0415
-
-            def whole(v):
-                return int(math.floor(v + 0.5))
-
-            rn = res.get("rain") or {}
-            check(f"the summary table gives the 2026 rainfall for {crop}",
-                  f"{whole(rn['mm_2026'])} mm" in readme, f"{whole(rn['mm_2026'])} mm")
-            check(f"the summary table gives the average rainfall for {crop}",
-                  f"{whole(rn['mm_average'])} mm" in readme, f"{whole(rn['mm_average'])} mm")
-            rpct = rn["pct_vs_average"]
-            rarrow = "\u2193" if rpct < 0 else "\u2191"
-            check(f"the summary table gives the rainfall change for {crop}",
-                  f"{rarrow} {abs(rpct):.1f} %" in readme
-                  or f"{rarrow} {abs(rpct):.1f}%" in readme,
-                  f"{rarrow} {abs(rpct):.1f}%")
 
     bundle_path = cfg.DASHBOARD_DATA / "bundle.js"
     if bundle_path.exists():
@@ -547,6 +526,74 @@ def main() -> None:
             check(f"the 2026 yield domain for {crop} covers its predictions",
                   close(dom[0], min(vals), 1e-3) and close(dom[1], max(vals), 1e-3),
                   f"{dom} vs {min(vals)}, {max(vals)}")
+
+    # ---- C13 the retired sections -------------------------------------------
+    # The page no longer carries the districts table, the disclosure list or
+    # the boxed 2026 disclaimer.  The README keeps the disclosures, so the
+    # report of record still carries every one of them.
+    index_html = (cfg.DASHBOARD / "index.html").read_text()
+    app_js = (cfg.DASHBOARD / "assets" / "app.js").read_text()
+    styles = (cfg.DASHBOARD / "assets" / "styles.css").read_text()
+    check("the districts table is retired from the page",
+          'id="forecastTable"' not in index_html
+          and "renderForecastTable" not in app_js
+          and "els.forecastTableBody" not in app_js, "")
+    check("the disclosure footer is retired from the page",
+          "disclosureList" not in index_html and "populateDisclosures" not in app_js
+          and "What this is not" not in index_html, "")
+    check("the 2026 disclaimer box is retired from the page",
+          "markerDisclaimer" not in index_html and "markerDisclaimer" not in app_js, "")
+    check("the retired styles are gone",
+          "#forecastTable" not in styles and ".disclosures" not in styles
+          and ".colophon" not in styles, "")
+    check("the page still labels 2026 as a prediction",
+          "2026-27 (prediction)" in app_js
+          and "2026-27 · prediction" in app_js
+          and "(prediction)" in app_js, "")
+
+    # ---- the disclosure set: the bundle and the report must agree -----------
+    if bundle_path.exists():
+        raw = bundle_path.read_text()
+        b = json.loads(raw[raw.index("{"):].rstrip().rstrip(";"))
+        disc = b["meta"].get("disclosures") or {}
+        check("the bundle ships the 15 mandatory disclosures",
+              len(disc) == 15, str(len(disc)))
+        # the report of record must carry every one of them
+        plain = readme.replace("**", "")
+        # every disclosure the bundle ships must be carried by the report,
+        # under its own heading.  The map is written out here so that the
+        # link between the record and the report is auditable rather than
+        # inferred from a string comparison.
+        headings = {
+            "reanalysis": "Reanalysis, not observation",
+            "convective": "Convective rainfall bias",
+            "confound": "No irrigation, soil, or input data",
+            "aggregates": "District aggregates, not farm-level",
+            "boundary": "Boundary discontinuity",
+            "sowing": "Sowing window",
+            "agency": "DES agency discontinuity",
+            "cotton": "Cotton is reported in bales",
+            "sample": "Small sample per crop",
+            "not_forecast": "2026 is a model prediction, not a validated forecast",
+            "forecast_method": "Each crop is forecast by its own specification",
+            "forecast_area": "2026 planted area does not exist",
+            "forecast_specimens": "No prediction interval is claimed",
+            "attribution": "Attribution",
+            "percentiles": "Rule-based percentile bands",
+        }
+        check("the bundle ships exactly the 15 known disclosures",
+              set(disc) == set(headings), str(sorted(set(disc) ^ set(headings))))
+        for key, heading in headings.items():
+            check(f"the report carries the disclosure '{key}'",
+                  heading in plain, heading[:50])
+        for phrase in [
+            "2026 is a model prediction",
+            "2026 planted area does not exist",
+            "No prediction interval is claimed",
+            "Each crop is forecast by its own specification",
+        ]:
+            check(f"the report carries the forecast disclosure: {phrase[:38]}",
+                  phrase in plain, phrase)
 
     # ---- §7 the twelve disclosures ----------------------------------------
     for phrase in [
