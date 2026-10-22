@@ -31,82 +31,31 @@ function run(d, w) {
     fire(el);
   }
 
-  results.defaultTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
   results.defaultFacts = txt(d.getElementById("modelFacts"));
-  results.defaultCurveNote = txt(d.getElementById("curveNote"));
   results.disclaimerVisible = !d.getElementById("markerDisclaimer").hidden;
   results.disclaimer = txt(d.getElementById("markerDisclaimer"));
 
+  // the crop selector and the model facts follow the selected crop
   setSelect("cropSelect", "Rice");
   results.riceFacts = txt(d.getElementById("modelFacts"));
-  results.riceCurveNote = txt(d.getElementById("curveNote"));
-  results.riceTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
 
   setSelect("cropSelect", "Wheat");
   results.wheatFacts = txt(d.getElementById("modelFacts"));
-  results.wheatCurveNote = txt(d.getElementById("curveNote"));
-  results.wheatTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
 
   setSelect("cropSelect", "Cotton(lint)");
   setSelect("seasonSelect", "2018-19");
-  results.seasonTableRows = d.querySelectorAll("#districtTable tbody tr[data-slug]").length;
   results.mapNote = txt(d.getElementById("mapNote"));
-  results.tableSubtitle = txt(d.getElementById("tableSubtitle"));
 
+  // the map metric drives the legend
   setSelect("metricSelect", "yield");
   results.legendAfterMetric = txt(d.getElementById("legendScale"));
-  results.tableColsYield = d.querySelectorAll("#districtTable thead th").length;
-  results.tableHeadersYield = Array.prototype.map.call(
-    d.querySelectorAll("#districtTable thead th"), function (th) { return txt(th); }
-  );
-  setSelect("metricSelect", "anomaly");
-
-  // the rainfall-deficit metric
   setSelect("metricSelect", "deficit");
   results.legendAfterDeficit = txt(d.getElementById("legendScale"));
   results.legendCaptionDeficit = txt(d.getElementById("legendCaption"));
-  results.tableHeadersDeficit = Array.prototype.map.call(
-    d.querySelectorAll("#districtTable thead th"), function (th) { return txt(th); }
-  );
-  results.deficitValues = Array.prototype.map.call(
-    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
-    function (tr) { return parseFloat(tr.children[2].textContent.replace(/[^0-9.\-]/g, "")); }
-  );
-  results.deficitAllNumeric = results.deficitValues.every(function (v) { return !isNaN(v); });
-  results.deficitMean = results.deficitValues.reduce(function (a, b) { return a + b; }, 0) /
-    (results.deficitValues.length || 1);
   setSelect("metricSelect", "anomaly");
-
-  var firstRow = d.querySelector("#districtTable tbody tr[data-slug]");
-  if (firstRow) {
-    firstRow.click();
-    results.pinnedRows = d.querySelectorAll("#districtTable tbody tr.is-pinned").length;
-  }
-
-  d.querySelector('#districtTable th[data-sort="rain"]').click();
-  // only the rainfall column, which is the first numeric cell of each row
-  var nums = Array.prototype.map.call(
-    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
-    function (tr) {
-      return parseFloat(tr.children[1].textContent.replace(/[^0-9.\-]/g, ""));
-    }
-  );
-  results.sortedAscending = nums.every(function (v, i) { return i === 0 || nums[i - 1] <= v; });
-  results.sortRowCount = nums.length;
-  d.querySelector('#districtTable th[data-sort="rain"]').click();
-  var nums2 = Array.prototype.map.call(
-    d.querySelectorAll("#districtTable tbody tr[data-slug]"),
-    function (tr) {
-      return parseFloat(tr.children[1].textContent.replace(/[^0-9.\-]/g, ""));
-    }
-  );
-  results.sortedDescending = nums2.every(function (v, i) { return i === 0 || nums2[i - 1] >= v; });
 
   results.leafletPaths = d.querySelectorAll("#map path").length;
   results.mapLabels = d.querySelectorAll("#map .district-label").length;
-  results.curvePlot = d.querySelectorAll("#curveChart svg").length;
-  results.curveScatterPaths = d.querySelectorAll("#curveChart .scatterlayer path").length;
-  results.curveShapes = d.querySelectorAll("#curveChart .shapelayer path").length;
   results.statsPlot = d.querySelectorAll("#statsChart svg").length;
   results.statsBars = d.querySelectorAll("#statsChart .barlayer path").length;
   results.disclosureItems = d.querySelectorAll("#disclosureList li").length;
@@ -145,6 +94,105 @@ function run(d, w) {
   results.impliedWithheld = mk.implied_withheld ?
     Object.keys(mk.implied_withheld).length : -1;
 
+  /* ── the forecast chart: ONE chart, with a crop selector ─────────────── */
+
+  // the retired sections must be gone
+  results.curveSectionPresent = !!d.getElementById("curveChart");
+  results.curveHeadingPresent = !!d.getElementById("curveHead");
+  results.districtTablePresent = !!d.getElementById("districtTable");
+  results.districtTableHeadPresent = !!d.getElementById("tableHead");
+  results.forecastGridPresent = !!d.getElementById("forecastGrid");
+
+  // one chart
+  results.forecastPlots = d.querySelectorAll("#forecastChart .plot-container").length;
+  results.forecastSvgs = d.querySelectorAll("#forecastChart svg.main-svg").length;
+
+  // the selector: "All" plus one tick per crop
+  results.tickButtons = d.querySelectorAll("#forecastTicks .forecast-tick").length;
+  results.tickAllText = txt(d.querySelector("#forecastTicks .forecast-tick--all"));
+  results.ticksOn = d.querySelectorAll("#forecastTicks .forecast-tick--on").length;
+  results.tickPressed = d.querySelectorAll('#forecastTicks .forecast-tick[aria-pressed="true"]').length;
+
+  // the x axis: nine observed seasons and then 2026, as the LAST category
+  var ticks = Array.prototype.map.call(
+    d.querySelectorAll("#forecastChart .xtick text"),
+    function (x) { return x.textContent; }
+  );
+  results.forecastXLabels = ticks;
+  results.forecastLastCategory = ticks.indexOf("2026") === ticks.length - 1;
+  results.forecastSeasonCount = ticks.length;
+
+  // the 2026 segment must be dashed, one per crop
+  results.forecastDashed = d.querySelectorAll(
+    "#forecastChart .js-line[style*='dash']"
+  ).length;
+
+  // the reference line at 100 and the boundary divider
+  results.forecastShapes = d.querySelectorAll("#forecastChart .shapelayer path").length;
+
+  // the legend explains the marks
+  results.forecastLegendItems = d.querySelectorAll("#forecastLegend .forecast-legend__item").length;
+  results.forecastFoot = txt(d.getElementById("forecastFoot"));
+  results.forecastLegendText = txt(d.getElementById("forecastLegend"));
+
+  /* ── the crop selector drives the chart ─────────────────────────────── */
+
+  // untick one crop: only that crop's line is left
+  var riceTick = d.querySelector('#forecastTicks .forecast-tick[data-crop="Rice"]');
+  if (riceTick) riceTick.click();
+  results.afterUntickOn = d.querySelectorAll("#forecastTicks .forecast-tick--on").length;
+  results.afterUntickAll = d.querySelectorAll("#forecastTicks .forecast-tick--all.forecast-tick--on").length;
+  results.afterUntickLines = d.querySelectorAll("#forecastChart .js-line").length;
+  results.afterUntickPoints = d.querySelectorAll("#forecastChart .points path").length;
+  results.afterUntickLegend = txt(d.getElementById("forecastLegend"));
+
+  // the "All" button ticks every crop back on
+  var allTick = d.querySelector("#forecastTicks .forecast-tick--all");
+  if (allTick) allTick.click();
+  results.afterAllOn = d.querySelectorAll("#forecastTicks .forecast-tick--on").length;
+  results.afterAllAll = d.querySelectorAll("#forecastTicks .forecast-tick--all.forecast-tick--on").length;
+  results.afterAllLines = d.querySelectorAll("#forecastChart .js-line").length;
+
+  // arhar carries one delivered outlier (Mulugu 2019-20) that must not be
+  // allowed to set the scale, and must be reported in the foot
+  var arharTick = d.querySelector('#forecastTicks .forecast-tick[data-crop="Arhar/Tur"]');
+  if (arharTick) arharTick.click();
+  results.arharFoot = txt(d.getElementById("forecastFoot"));
+  results.arharLines = d.querySelectorAll("#forecastChart .js-line").length;
+  results.arharYLabels = Array.prototype.map.call(
+    d.querySelectorAll("#forecastChart .ytick text"),
+    function (x) { return x.textContent; }
+  );
+  results.arharOn = d.querySelectorAll("#forecastTicks .forecast-tick--on").length;
+  if (allTick) allTick.click();
+
+  /* ── the 2026 forecast table ─────────────────────────────────────────── */
+
+  results.forecastTableRows = d.querySelectorAll("#forecastTable tbody tr[data-slug]").length;
+  results.forecastTableHeaders = d.querySelectorAll("#forecastTable thead th").length;
+  results.forecastDiffDown = d.querySelectorAll("#forecastTable .diff-cell--down").length;
+  results.forecastDiffUp = d.querySelectorAll("#forecastTable .diff-cell--up").length;
+  results.forecastSignsPrinted = Array.prototype.every.call(
+    d.querySelectorAll("#forecastTable .diff-cell"),
+    function (c) { return /[+-]/.test(c.textContent); }
+  );
+  results.forecastTableSubtitle = txt(d.getElementById("forecastTableSubtitle"));
+  results.forecastTableFoot = txt(d.getElementById("forecastTableFoot"));
+
+  /* ── the point-description panel ─────────────────────────────────────── */
+
+  results.detailPanelPresent = !!d.getElementById("forecastDetailBody");
+  results.detailFields = 0;
+  var frow = d.querySelector("#forecastTable tbody tr[data-slug]");
+  if (frow) {
+    frow.click();
+    results.detailFields = d.querySelectorAll("#forecastDetailBody > div").length;
+  }
+  results.detailHasRainfall = d.getElementById("forecastDetailBody")
+    ? /rainfall/.test(d.getElementById("forecastDetailBody").textContent) : false;
+  results.detailHasAreaBaseline = d.getElementById("forecastDetailBody")
+    ? /2022-23/.test(d.getElementById("forecastDetailBody").textContent) : false;
+
   publish(results);
 }
 
@@ -152,9 +200,10 @@ var iv = setInterval(function () {
   tries++;
   try {
     var d = frame.contentDocument;
-    if (d && d.getElementById("districtTable") &&
-        d.querySelectorAll("#districtTable tbody tr[data-slug]").length > 0 &&
-        d.querySelectorAll("#curveChart svg").length > 0) {
+    if (d && d.getElementById("forecastChart") &&
+        d.querySelectorAll("#forecastChart svg.main-svg").length > 0 &&
+        d.querySelectorAll("#forecastTicks .forecast-tick").length > 0 &&
+        d.querySelectorAll("#forecastTable tbody tr[data-slug]").length > 0) {
       clearInterval(iv);
       run(d, frame.contentWindow);
     } else if (tries > 300) {
@@ -166,11 +215,9 @@ var iv = setInterval(function () {
         diag.hasGeo = typeof dd.defaultView.TA_GEO;
         diag.cropOptions = dd.getElementById("cropSelect") ?
           dd.getElementById("cropSelect").options.length : -1;
-        diag.tableRows = dd.querySelectorAll("#districtTable tbody tr").length;
-        diag.tableRowsWithSlug = dd.querySelectorAll('#districtTable tbody tr[data-slug]').length;
-        diag.curvePlots = dd.querySelectorAll("#curveChart svg").length;
-        diag.anyPlotsInCurve = dd.getElementById("curveChart") ?
-          dd.getElementById("curveChart").children.length : -1;
+        diag.ticks = dd.querySelectorAll("#forecastTicks .forecast-tick").length;
+        diag.forecastPlots = dd.querySelectorAll("#forecastChart .plot-container").length;
+        diag.forecastSvgs = dd.querySelectorAll("#forecastChart svg").length;
         diag.plots = dd.querySelectorAll(".js-plotly-plot").length;
         diag.mapPaths = dd.querySelectorAll("#map path").length;
         diag.bodyStart = dd.body.textContent.replace(/\s+/g, " ").trim().slice(0, 200);

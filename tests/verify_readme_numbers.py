@@ -322,15 +322,160 @@ def main() -> None:
               set(bundle.get("crop_colors", {})) == {
                   "Rice", "Arhar/Tur", "Moong(Green Gram)", "Cotton(lint)"},
               str(sorted(bundle.get("crop_colors", {}))))
+
+        # ---- C10 the 2026 forecast ----------------------------------------
+        fc = bundle.get("forecast", {})
+        check("the forecast block ships all four crops",
+              set(fc) == {"Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)", "Rice"},
+              str(sorted(fc)))
+        for crop, skill in [("Cotton(lint)", -0.235), ("Arhar/Tur", 0.0055),
+                            ("Moong(Green Gram)", -0.017), ("Rice", 0.078)]:
+            check(f"forecast skill for {crop} = {skill:+.3f}",
+                  close(fc[crop]["skill_rmse"], skill, 5e-4),
+                  f"{fc[crop]['skill_rmse']:.4f}")
+        # the state figures, area-weighted on 2022-23 area
+        for crop, y26, ref, pct in [("Cotton(lint)", 2.029, 2.645, -23.3),
+                                    ("Arhar/Tur", 0.837, 0.771, 8.6),
+                                    ("Moong(Green Gram)", 0.756, 0.618, 22.4),
+                                    ("Rice", 3.151, 3.327, -5.3)]:
+            st = fc[crop]["state"]
+            check(f"2026 yield/area for {crop} = {y26}",
+                  close(st["yield_2026_per_ha"], y26, 5e-3),
+                  f"{st['yield_2026_per_ha']}")
+            check(f"reference yield/area for {crop} = {ref}",
+                  close(st["reference_yield_per_ha"], ref, 5e-3),
+                  f"{st['reference_yield_per_ha']}")
+            check(f"2026 change for {crop} = {pct:+.1f}%",
+                  close(st["pct_vs_reference"], pct, 5e-2),
+                  f"{st['pct_vs_reference']}")
+            # the total and the yield/area must agree in percentage
+            pct_total = 100.0 * (st["total_2026"] / st["reference_total_same_area"] - 1.0)
+            check(f"the total and the yield/area agree for {crop}",
+                  abs(pct_total - st["pct_vs_reference"]) < 0.05,
+                  f"{pct_total:.3f} vs {st['pct_vs_reference']}")
+            check(f"no negative predicted yields for {crop}",
+                  fc[crop]["n_negative_predicted"] == 0,
+                  str(fc[crop]["n_negative_predicted"]))
+        # arhar's quadratic must be recorded as rejected
+        rejected = [r["spec"] for r in fc["Arhar/Tur"]["rejected_specs"]]
+        check("arhar's quadratic is recorded as rejected on validity",
+              "S1_quadratic" in rejected, str(rejected))
+        check("the rejection reason names the negative yields",
+              any("non-positive" in r["reason"]
+                  for r in fc["Arhar/Tur"]["rejected_specs"]),
+              str([r["reason"][:40] for r in fc["Arhar/Tur"]["rejected_specs"]]))
+        # the area baseline must be stated
+        fmeta = bundle.get("forecast_meta", {})
+        check("the area baseline is stated in the forecast",
+              fmeta.get("area_baseline_season") == "2022-23",
+              str(fmeta.get("area_baseline_season")))
+        check("the area baseline note explains the assumption",
+              "does not exist" in fmeta.get("area_baseline_note", ""),
+              fmeta.get("area_baseline_note", "")[:60])
     else:
         check("dashboard bundle present", False, "bundle.js missing")
+
+    # ---- C10 the per-crop model selection ---------------------------------
+    fm_path = cfg.PROCESSED / "forecast_models.json"
+    if fm_path.exists():
+        fm = cfg.read_json(fm_path)
+        for crop, spec in [("Cotton(lint)", "S1_linear"), ("Arhar/Tur", "S1_linear"),
+                           ("Moong(Green Gram)", "S1_linear"), ("Rice", "S1_linear")]:
+            check(f"the selected specification for {crop} is {spec}",
+                  fm["crops"][crop]["selected_spec"] == spec,
+                  fm["crops"][crop]["selected_spec"])
+        check("the selection method is recorded",
+              "leave-one-season-out" in fm["selection_method"],
+              fm["selection_method"])
+        check("the validity gate is recorded",
+              "positive" in fm["validity_gate"], fm["validity_gate"])
+    else:
+        check("forecast models artefact present", False, "forecast_models.json missing")
+
+    fs_path = cfg.PROCESSED / "forecast_series.json"
+    if fs_path.exists():
+        fs = cfg.read_json(fs_path)
+        check("the area baseline is 2022-23",
+              fs["area_baseline_season"] == "2022-23", fs["area_baseline_season"])
+        check("the aggregation is recorded as area-weighted",
+              "area-weighted" in fs["aggregation"], fs["aggregation"])
+        check("the measure is stated as yield per hectare",
+              "yield per hectare" in fs["measure"], fs["measure"])
+    else:
+        check("forecast series artefact present", False, "forecast_series.json missing")
+
+    # ---- C11 the indexed forecast chart ------------------------------------
+    # The README publishes the indexed state series the chart draws.  It is
+    # recomputed from the panel here, so the README and the panel cannot
+    # drift apart silently.
+    panel_path = cfg.PROCESSED / f"panel_v{cfg.data_version()}.parquet"
+    if panel_path.exists() and fs_path.exists():
+        import pandas as pd  # noqa: PLC0415
+
+        panel = pd.read_parquet(panel_path)
+        fs = cfg.read_json(fs_path)
+        for crop, res in fs["crops"].items():
+            ref = res["state"]["reference_yield_per_ha"]
+            d = panel[panel["crop"] == crop]
+            st = d.groupby("season").apply(
+                lambda s: float((s["yield"] * s["area_ha"]).sum() / s["area_ha"].sum()),
+                include_groups=False,
+            )
+            idx = {s: 100.0 * v / ref for s, v in st.items()}
+            end = 100.0 * res["state"]["yield_2026_per_ha"] / ref
+            # the 2026 endpoint on the indexed axis is the forecast difference
+            check(f"the indexed 2026 endpoint for {crop} equals 100 + the forecast %",
+                  close(end, 100.0 + res["state"]["pct_vs_reference"], 0.06),
+                  f"{end:.2f} vs {100.0 + res['state']['pct_vs_reference']:.2f}")
+            # every season's index must appear in the README table
+            for season, value in idx.items():
+                check(f"README index table has {crop} {season} = {value:.1f}",
+                      f"{value:.1f}" in readme, f"{value:.1f}")
+            check(f"README index table has the 2026 endpoint for {crop} = {end:.1f}",
+                  f"**{end:.1f}**" in readme, f"{end:.1f}")
+            # the state figure must be a state total over a state area,
+            # computed on the primary panel exactly as the forecast does
+            dp = panel[(panel["crop"] == crop) & panel["is_primary_panel"]]
+            pooled = float(dp["production"].sum() / dp["area_ha"].sum())
+            check(f"the area-weighted reference for {crop} equals the pooled ratio",
+                  close(pooled, ref, 1e-3), f"{pooled:.4f} vs {ref:.4f}")
+
+    # the report's headline and the section headings
+    check("the report headline is the forecast, not a reading",
+          "**Forecasting kharif yield from rainfall.**" in readme, "")
+    check("the model-comparison heading is the report's language",
+          "### Does the weather model earn its place?" in readme, "")
+    check("the dashboard uses the same heading",
+          "Does the weather model earn its place?"
+          in (cfg.DASHBOARD / "index.html").read_text(), "")
+
+    # ---- C11 the retired sections ------------------------------------------
+    index_html = (cfg.DASHBOARD / "index.html").read_text()
+    app_js = (cfg.DASHBOARD / "assets" / "app.js").read_text()
+    styles = (cfg.DASHBOARD / "assets" / "styles.css").read_text()
+    check("the response-curve chart is retired from the page",
+          "curveChart" not in index_html and "renderCurve" not in app_js, "")
+    check("the 2018-19 districts table is retired from the page",
+          "districtTable" not in index_html and "renderTable" not in app_js, "")
+    check("the four-panel forecast grid is retired",
+          "forecastGrid" not in index_html and "forecast-cell" not in styles, "")
+    check("the 2026 districts table is kept",
+          "forecastTable" in index_html
+          and "2026-27 · " in app_js
+          and "districts · " in app_js, "")
+    check("the crop selector offers All plus the crop ticks",
+          "All crops" in app_js and "forecast-tick" in app_js, "")
+    check("the chart axis is indexed to the Telangana average",
+          "Telangana average = 100" in app_js, "")
+    check("the state line is area-weighted in the chart",
+          "area-weighted" in app_js, "")
 
     # ---- §7 the twelve disclosures ----------------------------------------
     for phrase in [
         "Reanalysis, not observation", "Convective rainfall bias",
         "No irrigation, soil, or input data", "District aggregates, not farm-level",
         "Boundary discontinuity", "Sowing window", "DES agency discontinuity",
-        "reported in bales", "Small sample per crop", "2026 is not forecast",
+        "reported in bales", "Small sample per crop", "2026 is a model prediction",
         "Attribution", "Rule-based percentile bands",
     ]:
         check(f"disclosure present: {phrase}", phrase in readme)
