@@ -1,8 +1,8 @@
 """Step 12 - Season-window sensitivity for the response curve.
 
-The official kharif analysis window is 1 Jun - 30 Sep (the sowing window, SRS
+The official kharif analysis window is 1 Jun - 30 Sep (the sowing window,
 §5.1).  But Jun-Sep is not the growing season: cotton and arhar run to Nov-Dec,
-so late-season rainfall is undercounted - a stated limitation (SRS §9 item 6).
+so late-season rainfall is undercounted - a stated limitation (README 7, item 6).
 
 This script turns that limitation into a test.  It recomputes seasonal rainfall
 under three windows and refits the Stage 1 specification for each:
@@ -15,7 +15,7 @@ GATE: the jun_sep row must reproduce the primary Stage 1 fit exactly (b1, b2,
 R2, vertex), which proves the recomputation matches the shipped panel.  If it
 does not, the feature pipeline and this script have diverged and the build stops.
 
-Authority: plan/SRS.md §5.1, §9 ; plan/GUIDE.md Step 7.
+Authority: README section 5 (season-window sensitivity).
 """
 
 from __future__ import annotations

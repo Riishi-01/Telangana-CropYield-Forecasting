@@ -32,7 +32,7 @@ wrong for that crop.
 Outputs:
   data/processed/slope_heterogeneity.json
 
-Authority: plan/IMPROVEMENT_PLAN.md P1-9 ; plan/SRS.md §5.4.
+Authority: README section 5 (mixed-effects test).
 """
 
 from __future__ import annotations

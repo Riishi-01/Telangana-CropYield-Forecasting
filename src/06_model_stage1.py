@@ -1,6 +1,6 @@
 """Step 06 - Stage 1: district + year fixed-effects quadratic response curve.
 
-Specification (SRS §5.4):
+Specification:
 
     yield ~ rain_mm + I(rain_mm**2) + C(district_id) + C(year)
 
@@ -10,14 +10,14 @@ Estimator: OLS (statsmodels).  Vertex (optimum rainfall):
 
 A vertex is reported ONLY when b2 < 0 AND b2 is significant at p < 0.05.  If
 that condition fails the relationship is monotonic or flat; that is reported
-as a result and is never reframed as a vertex (GUIDE §7.2).
+as a result and is never reframed as a vertex.
 
-Robustness (GUIDE §7.3, §7.4): every crop is refitted
+Robustness: every crop is refitted
   (a) without the year fixed effects, and
   (b) on the extended panel (era-tagged district ids, 2014-15 .. 2022-23).
 All specifications are reported, including the ones that look worse.
 
-Authority: plan/SRS.md §5.4, §7.2 ; plan/GUIDE.md Step 7.
+Authority: README section 5 (Stage 1) and section 7 (limitations).
 """
 
 from __future__ import annotations

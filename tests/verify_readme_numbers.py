@@ -442,7 +442,9 @@ def main() -> None:
 
     # the report's headline and the section headings
     check("the report headline is the forecast, not a reading",
-          "**Forecasting kharif yield from rainfall.**" in readme, "")
+          "# Forecasting kharif yield from rainfall" in readme
+          and "**Telangana, kharif 2014-15 → 2022-23, four crops, 32 districts "
+              "— and a 2026 forecast.**" in readme, "")
     check("the validation section is retitled",
           "### Can rainfall predict a district's kharif yield?" in readme, "")
     check("the retired heading is gone from the report",

@@ -1566,7 +1566,7 @@
     return crop;
   }
 
-  // Crop identity colour (Okabe-Ito, SRS §7.1). A crop keeps the same colour
+  // Crop identity colour (Okabe-Ito). A crop keeps the same colour
   // in every chart and in the selector strip, and switching crops never
   // repaints the others.
   function cropColor(crop) {

@@ -4,16 +4,16 @@ Input : data/interim/weather_daily.parquet
 Output: data/interim/features.parquet        one row per district x season year
         data/interim/features_2026.parquet   the 2026 marker reading (if present)
 
-Feature windows (SRS §5.1, §5.4):
+Feature windows:
   analysis window  1 Jun - 30 Sep  (official kharif sowing window)
   dry-spell window 1 Jun - 31 Oct  (wider, so late-season spells are captured)
 
-CAUSALITY (GUIDE §5.3): every window is closed at a fixed calendar boundary
+CAUSALITY: every window is closed at a fixed calendar boundary
 that falls *before* the crop is harvested.  No feature uses a trailing window
 that peeks past the end of its own window, and no feature is shifted forward
 onto a later target.  The window direction is stated at every computation.
 
-Authority: plan/SRS.md §5.1, §5.4 ; plan/GUIDE.md Step 5.
+Authority: README section 3 (the features table).
 """
 
 from __future__ import annotations

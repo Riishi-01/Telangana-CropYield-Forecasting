@@ -2,7 +2,7 @@
 
 A null that appears under one specification is an artefact until proven
 otherwise.  This script runs the headline rainfall-yield relationship under
-every specification listed in plan/IMPROVEMENT_PLAN.md P1-6 and reports the
+every specification listed in the README's robustness grid and reports the
 grid as a table with an explicit verdict line.
 
 The grid rows, and what each one is for:
@@ -15,7 +15,7 @@ The grid rows, and what each one is for:
   6  without district fixed effects    is geography masking the signal?
   7  ERA5-Land 0.1 deg instead of ERA5 resolution sensitivity  [DEFERRED - Tier 2]
 
-Row 7 is out of Tier 1 scope (SRS §11 Tier 2 backlog) and is reported as
+Row 7 is out of Tier 1 scope (Tier 2 backlog) and is reported as
 deferred rather than silently dropped.
 
 The headline statistic for every cell is the within-district correlation
@@ -26,7 +26,7 @@ reported because a crop can be significant on one and not the other.
 Outputs:
   data/processed/robustness_grid.json
 
-Authority: plan/IMPROVEMENT_PLAN.md P1-6, P1-7 ; plan/SRS.md §5.4, §5.5, §11.
+Authority: README section 5 (the robustness grid).
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ def main() -> None:
         # row 7 - ERA5-Land 0.1 deg: Tier 2, not run at Tier 1
         cells["7_era5land_0.1deg"] = {
             "deferred": True,
-            "reason": "SRS §11 Tier 2 backlog - not required for Tier 1 delivery",
+            "reason": "Tier 2 backlog - not required for Tier 1 delivery",
         }
 
         grid[crop] = cells
@@ -273,7 +273,7 @@ def main() -> None:
             "seed": RANDOM_STATE,
             "panel": f"panel_v{VERSION}.parquet",
             "panel_scope": "primary panel (post-2016 districts)",
-            "row_7_status": "deferred to Tier 2 (SRS §11)",
+            "row_7_status": "deferred to Tier 2",
             "crops": grid,
             "summary": summary,
         },

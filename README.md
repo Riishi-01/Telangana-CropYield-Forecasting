@@ -1,17 +1,19 @@
-# Telangana kharif yield–weather explorer
+# Forecasting kharif yield from rainfall
 
-**Forecasting kharif yield from rainfall.**
+**Telangana, kharif 2014-15 → 2022-23, four crops, 32 districts — and a 2026 forecast.**
 
-An empirical analysis of the relationship between kharif-season rainfall and crop yield
-across Telangana's districts, with an interactive dashboard for exploring it. Yields come
-from the Directorate of Economics & Statistics (DES); rainfall comes from ERA5 reanalysis
-via the Open-Meteo archive API. The 2026 figures are **model predictions**, and every
-one of them carries its out-of-sample skill score.
+An agrometeorology analysis of the relationship between kharif-season rainfall and crop
+yield across Telangana's districts, with an interactive dashboard for exploring it. Yields
+come from the Directorate of Economics & Statistics (DES); rainfall comes from ERA5
+reanalysis via the Open-Meteo archive API. The 2026 figures are **model predictions**,
+and every one of them carries its out-of-sample skill score.
 
 - **DATA_VERSION** `1.1.0`
 - **Scope** Telangana · Kharif · 2014-15 → 2022-23 · four crops (Cotton lint, Arhar/Tur, Moong, Rice)
 - **Primary panel** 2016-17 → 2022-23, 32 post-reorganisation districts
 - **Extended panel** 2014-15 → 2022-23, era-tagged district ids (robustness only)
+- **Predictive model** Statistical: least squares with district and year fixed effects,
+  one specification per crop
 - **Interactive explorer** `dashboard/index.html` — open it directly, no server needed
 
 > **The result is a split, not a blanket null, and it is reported as it is.**
@@ -287,8 +289,8 @@ cotton's pooled signal is a confound.**
   that row would reward a broken join. It is reported here as the alignment
   test instead. The implemented alignment is the one that maximises mean |r|
   across the four crops (0.137, against 0.107 for +1 yr and 0.037 for −1 yr).
-- **Row 7 is deferred**, not dropped: ERA5-Land 0.1° is on the Tier 2 backlog
-  (SRS §11) and is not required for Tier 1 delivery.
+- **Row 7 is deferred**, not dropped: ERA5-Land 0.1° is a finer reanalysis and
+  is not required for the delivery in this repository.
 
 ### Do district rainfall sensitivities differ? (mixed-effects test)
 
@@ -592,9 +594,9 @@ card — and in the CSV export, which is the full 32-row table; they are not pri
 as a list. The fifteen mandatory disclosures and the full set of limitations are in
 §7 below and in the README of the repository, not on the page. The rainfall–yield
 response curve is reported in §5 and in F1–F3. The cross-crop model-comparison chart
-and the season-window sensitivity matrix were retired from the page (ERRATA C14): the
-skill table is in §5 above, and the window sensitivity is in §5 and in F5. The page
-leads with the forecast, and this report carries the caveats.
+and the season-window sensitivity matrix are not on the page: the skill table is in
+§5 above, and the window sensitivity is in §5 and in F5. The page leads with the
+forecast, and this report carries the caveats.
 
 ## 7. Limitations — all nineteen
 
@@ -658,9 +660,9 @@ district irrigation statistics that would make this testable.
 
 Beyond the twelve, and specific to this build:
 
-16. **The delivered DES file covers 2014-15 → 2022-23 only.** The specification assumed
-    2000-01 → 2022-23; the file does not contain the earlier seasons. See
-    `plan/ERRATA.md` — the file wins, and the panel windows were narrowed accordingly.
+16. **The delivered DES file covers 2014-15 → 2022-23 only.** A longer record was
+    wanted; the file does not contain the earlier seasons, so the panel windows were
+    narrowed to what was actually delivered rather than assumed.
     **The "not enough seasons" hypothesis is therefore untested**: with 7 fitted
     seasons and 3 held out, a relationship of the size seen for rice cannot be
     distinguished from noise in the other three crops with confidence.
@@ -728,8 +730,8 @@ bash tests/run_dashboard_qa.sh                     # 58 headless checks
 - **What does and does not reproduce.** The data artefacts rebuild byte-identically
   (`panel_v1.1.0.parquet`, `crops_kharif_clean.csv`). The manifests and the dashboard
   bundle re-stamp their `created_utc` field on every run, so a rebuild leaves those
-  seven files modified in git — that is by design, since the SRS requires every fetch
-  to record its UTC timestamp. Nothing else differs.
+  files modified in git — that is by design, since every fetch and every derived
+  artefact records its own UTC timestamp. Nothing else differs.
 
 **Environment note:** `data/raw/`, `data/interim/` and `data/processed/` are
 gitignored — reproducibility is carried by the manifests and checksums, not by
@@ -773,11 +775,15 @@ data/processed/    crops_kharif_clean, panel, model summary, robustness
 data/geo/          districts.csv, districts.geojson, name_crosswalk.csv, PARTITION_NOTE.md
 data/manifests/    fetch_manifest.json, checksums.sha256, per-stage manifests
 src/01..17         the pipeline, one script per stage
-figures/           F1–F6 static PNGs
+figures/           F1–F7 static PNGs
 dashboard/         the static interactive site
 tests/             artefact verification and the headless dashboard QA
-plan/              SRS.md, GUIDE.md, ERRATA.md, IMPROVEMENT_PLAN.md
+README.md          this file is the report of record: method, results,
+                   limitations and the reasoning behind every published choice
 ```
 
-**Git policy:** local commits only. No remote is configured, and no push has been
-performed — the owner controls all remotes, releases and tags.
+**Git policy:** data blobs stay out of git. `data/raw/`, `data/interim/` and
+`data/processed/` are ignored; reproducibility is carried by the manifests and
+SHA-256 checksums under `data/manifests/`, which are tracked, together with
+`DATA_VERSION` and the district boundary files. That separation is why a rebuild
+reproduces the panel byte-identically without committing a single parquet file.

@@ -1,6 +1,6 @@
 """Shared paths, constants and helpers for the telangana-agromet pipeline.
 
-Authority: plan/SRS.md, plan/GUIDE.md.
+Authority: README sections 4 and 7.
 Every script in src/ imports from here so that paths, seeds, colour rules and
 provenance handling are defined in exactly one place.
 
@@ -57,12 +57,12 @@ RANDOM_STATE = SEED
 DES_SOURCE = DATA / "horizontal_crop_vertical_year_report.xls"
 DES_RAW_COPY = RAW_DES / "horizontal_crop_vertical_year_report.xls"
 
-# Weather (SRS §3.2)
+# Weather
 OPEN_METEO_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
 WEATHER_MODEL = "era5"  # ERA5 reanalysis via the Open-Meteo archive API
 WEATHER_LICENCE = "CC BY 4.0 (ERA5 via Open-Meteo)"
 
-# Windows (SRS §5.1, amended by plan/ERRATA.md for the actual DES coverage)
+# Windows (as narrowed to the actual DES coverage)
 INGEST_START = "2014-06-01"
 INGEST_END = "2023-10-31"
 ANALYSIS_START_MMDD = (6, 1)
@@ -70,7 +70,7 @@ ANALYSIS_END_MMDD = (9, 30)
 FEATURE_WINDOW_END_MMDD = (10, 31)  # dry-spell features use Jun 1 - Oct 31
 
 # --------------------------------------------------------------------------- #
-# Agricultural-year <-> calendar-year mapping  (SRS §5.1, gate G1)
+# Agricultural-year <-> calendar-year mapping (verified, not assumed)
 # --------------------------------------------------------------------------- #
 # Telangana's agricultural year runs June to May, and a kharif crop is sown
 # between June and September.  The DES labels that crop with the agricultural
@@ -94,19 +94,19 @@ FEATURE_WINDOW_END_MMDD = (10, 31)  # dry-spell features use Jun 1 - Oct 31
 # signature of a misaligned join.
 SEASON_OPENS_IN_CALENDAR_YEAR = True
 YEAR_MAPPING = "season Y-YY == Jun-Oct of calendar year Y (season opens in year Y)"
-YEAR_MAPPING_SOURCE = "SRS §5.1 Telangana District Collectorate (Kamareddy), " \
+YEAR_MAPPING_SOURCE = "Telangana District Collectorate (Kamareddy), " \
                       "agricultural year June-May, kharif sown June-September"
 
-# Marker window for the 2026 rainfall reading (SRS §5.6)
+# Marker window for the 2026 rainfall reading
 MARKER_YEAR = 2026
 MARKER_START = "2026-06-01"
 MARKER_END = "2026-09-30"
 
-# Panel definitions (plan/ERRATA.md C1)
+# Panel definitions
 PRIMARY_PANEL_START = "2016-17"
 EXTENDED_PANEL_START = "2014-15"
 
-# Crops (SRS §5.3, scope fixed by the owner: Telangana kharif 2014-2022,
+# Crops (scope fixed by the owner: Telangana kharif 2014-2022,
 # these four crops only).  The source file carries 36 kharif crop groups; the
 # other 32 are dropped in ingest as unnecessary columns/rows.
 PRIMARY_CROPS = ["Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)"]
@@ -122,7 +122,7 @@ CROP_LABELS = {
     "Rice": "Rice",
 }
 
-# Units as declared by the source column labels (SRS §5.3 unit hazard):
+# Units as declared by the source column labels (unit hazard):
 # cotton is reported in bales, everything else in tonnes.  No conversion is
 # applied - a bale-to-tonne factor would be an assumption, not a cited value.
 CROP_UNITS = {
@@ -149,11 +149,11 @@ def season_era(season: str) -> str:
         return "pre2016"
     return "pre2001"
 
-# Validation (SRS §5.5) - chronological split only, never random.
+# Validation - chronological split only, never random.
 TRAIN_LAST_SEASON = "2019-20"
 TEST_FIRST_SEASON = "2020-21"
 
-# Colour system (SRS §7.1) - red/green pairings and rainbow maps are prohibited.
+# Colour system - red/green pairings and rainbow maps are prohibited.
 CMAP_DEFICIT = "YlOrRd"  # sequential, drought severity
 CMAP_ANOM = "RdYlBu"  # diverging, zero pinned to the exact midpoint
 C_CURVE = "#1f77b4"
@@ -161,7 +161,7 @@ C_RAIN = "#4C78A8"
 C_YIELD = "#E45756"
 C_MARKER_2026 = "#111111"
 
-# Crop identity palette - Okabe-Ito, colourblind-safe (SRS §7.1).  One colour
+# Crop identity palette - Okabe-Ito, colourblind-safe.  One colour
 # per crop, fixed for every chart, figure and selector: switching crops never
 # repaints the other crops.
 CROP_COLORS = {
@@ -171,7 +171,7 @@ CROP_COLORS = {
     "Cotton(lint)": "#0072B2",     # boll blue
 }
 
-# Mandatory disclosure strings (SRS §5.6, §9)
+# Mandatory disclosure strings (README section 7)
 DISCLOSURE_2026 = (
     "2026 is a model prediction, not a validated forecast. Each crop is forecast by "
     "its own specification, selected by leave-one-season-out cross-validation inside "
@@ -393,7 +393,7 @@ def implied_2026_range(primary, marker_features, crop: str, coef: dict) -> dict 
 
 
 # --------------------------------------------------------------------------- #
-# Network: curl-based fetch with mandatory retry (GUIDE §4.1)
+# Network: curl-based fetch with mandatory retry
 # --------------------------------------------------------------------------- #
 # The Open-Meteo archive endpoint intermittently fails with SSL_ERROR_SYSCALL
 # through this network path. urllib fails on nearly every request while curl
@@ -440,7 +440,7 @@ def fetch(url: str, tries: int = 8, timeout: int = 60, pause: float = 5.0) -> di
 
     Returns the decoded JSON body. Raises FetchError when the retry budget is
     exhausted. The raw body is never mutated here - callers cache it verbatim
-    into data/raw/ before any processing (GUIDE §4.5).
+    into data/raw/ before any processing.
     """
     last_status = "000"
     last_err = ""

@@ -231,7 +231,7 @@ a { color: var(--color-accent); }
   margin-left: auto;
 }
 
-/* Crop identity strip (SRS §7.1, Okabe-Ito). One fixed colour per crop,
+/* Crop identity strip (Okabe-Ito). One fixed colour per crop,
    shown here so the same colour is recognisable in the curve, the series and
    the selector. Clicking a chip switches crop. */
 .cropstrip {

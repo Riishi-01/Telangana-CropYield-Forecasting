@@ -26,7 +26,7 @@ NORMALISATION (units and metrics):
   * A hard gate asserts yield == round(yield_reported, 2) on every kept row.  If
     that identity ever fails the build stops: that is a data error, not rounding.
 
-Authority: plan/SRS.md §3.1, §3.3, §5.3 ; plan/GUIDE.md Step 3 ; plan/ERRATA.md.
+Authority: README section 3 (the delivered dataset) and section 4 (the identity gate).
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ log = cfg.log
 cfg.ensure_dirs()
 
 KEY_COLS = ("State", "District", "Year")
-EXPECTED_SHAPE = (238, 111)   # verified against the delivered file (ERRATA C2)
+EXPECTED_SHAPE = (238, 111)   # verified against the delivered file 
 
 METRIC_MAP = {
     "Area (Hectare)": "area_ha",
@@ -54,7 +54,7 @@ METRIC_MAP = {
     "Yield (Bales/Hectare)": "yield_reported",
 }
 
-MIN_AREA_HA = 10.0   # DES convention for non-commercial plots (GUIDE §3.4)
+MIN_AREA_HA = 10.0   # DES convention for non-commercial plots
 
 
 def parse_number(raw) -> float:
@@ -93,7 +93,7 @@ def main() -> None:
     raw = tables[0]
     log(f"  source shape {raw.shape}")
     if raw.shape != EXPECTED_SHAPE:
-        log(f"  WARNING: shape {raw.shape} != expected {EXPECTED_SHAPE} (ERRATA C2)")
+        log(f"  WARNING: shape {raw.shape} != expected {EXPECTED_SHAPE} ")
     assert raw.columns.nlevels == 3, "expected a 3-level MultiIndex"
 
     key_idx = [i for i, v in enumerate(raw.columns) if v[0] in KEY_COLS]
@@ -147,7 +147,7 @@ def main() -> None:
     log(f"  crop scope: kept {len(cfg.TARGET_CROPS)}, "
         f"dropped {len(out_of_scope)} out-of-scope crop groups")
 
-    # -- quality filter (GUIDE §3.4) -----------------------------------------
+    # -- quality filter ---------------------------------------------------------
     crop_key = full["crop"].copy()
     m_area0 = full["area_ha"].eq(0)
     m_prod0 = full["production"].eq(0)

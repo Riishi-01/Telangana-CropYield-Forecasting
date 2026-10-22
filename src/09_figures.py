@@ -6,12 +6,12 @@ F2  time series     stacked, shared x-axis, p10-p90 bands, NO dual axis
 F3  validation      model vs baseline RMSE by crop, chronological test period
 F4  choropleth      yield anomaly % by district, RdYlBu, fixed domain
 
-Colour system (SRS §7.1):
+Colour system:
   YlOrRd  sequential, drought / rainfall deficit
   RdYlBu  diverging, yield anomaly, zero pinned to the exact midpoint
   jet / rainbow / hsv and red-green pairings are prohibited.
 
-Authority: plan/SRS.md §7.1, §7.3 ; plan/GUIDE.md Step 10.
+Authority: README section 6 (figures) and section 7 (colour system).
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ def figure_f1(panel, summary, marker):
 
             b1 = float(coef["b1"])
             b2 = float(coef["b2"])
-            # crop identity colour (SRS §7.1, Okabe-Ito): a crop keeps the
+            # crop identity colour (Okabe-Ito): a crop keeps the
             # same colour in every figure and in the dashboard
             crop_col = cfg.CROP_COLORS.get(crop, cfg.C_CURVE)
 
@@ -412,7 +412,7 @@ def figure_f4(panel, year="2022-23", crop="Cotton(lint)"):
     lim = float(max(abs(values.min()), abs(values.max())))
     lim = max(lim, 10.0)
     norm = Normalize(vmin=-lim, vmax=lim)          # zero -> exact midpoint
-    # RdYlBu reversed: the SRS fixes the semantics as blue = below normal,
+    # RdYlBu reversed: the semantics are fixed as blue = below normal,
     # cream = normal, red = above normal.
     cmap = plt.get_cmap(cfg.CMAP_ANOM).reversed()
 

@@ -9,7 +9,7 @@
   ],
   "clean_dataset": "crops_kharif_clean",
   "clean_dataset_sha256": "1078c97bcc75018f7b750e956c1f093cb72531ac07aaa1e9c17878735b2cbec6",
-  "created_utc": "2026-10-22T09:50:28+00:00",
+  "created_utc": "2026-10-22T10:05:45+00:00",
   "crops": [
     "Cotton(lint)",
     "Arhar/Tur",
@@ -51,13 +51,13 @@
     "2019-20"
   ],
   "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
-  "weather_fetched_utc": "2026-10-22T09:50:26+00:00",
+  "weather_fetched_utc": "2026-10-22T10:05:44+00:00",
   "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
   "weather_rows": 113984,
   "weather_sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
   "weather_source": "open-meteo/era5",
   "year_mapping": "season Y-YY == Jun-Oct of calendar year Y (season opens in year Y)",
-  "year_mapping_source": "SRS \u00a75.1 Telangana District Collectorate (Kamareddy), agricultural year June-May, kharif sown June-September",
+  "year_mapping_source": "Telangana District Collectorate (Kamareddy), agricultural year June-May, kharif sown June-September",
   "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
   "yield_source": "DES district-wise kharif crop production (Directorate of Economics & Statistics, Govt. of India)"
 }

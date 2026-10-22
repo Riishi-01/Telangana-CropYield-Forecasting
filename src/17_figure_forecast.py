@@ -40,8 +40,7 @@ The two pre-2016 seasons are 9 undivided parent districts and 2016-17 onward
 are the 32 post-reorganisation districts.  The boundary is marked, because
 the district-level points on the two sides are not the same units.
 
-Authority: plan/SRS.md §5.6 ; plan/IMPROVEMENT_PLAN.md P3-12, P4-15 ;
-plan/ERRATA.md C11.
+Authority: README section 5.5 and section 6 (F6, F7).
 """
 
 from __future__ import annotations

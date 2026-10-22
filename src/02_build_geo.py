@@ -7,14 +7,14 @@ Outputs:
   data/geo/name_crosswalk.csv  DES name -> GeoJSON feature name, with method
   data/geo/districts.csv       one row per district x era, with lat/lon
   data/geo/districts.geojson   the 32 used features, coordinate-simplified
-  data/geo/PARTITION_NOTE.md   the 2016 reorganisation verdict (SRS §4.3)
+  data/geo/PARTITION_NOTE.md   the 2016 reorganisation verdict
   data/manifests/geo.json      provenance: source URL, fetch time, checksums
 
-Coordinates (SRS §2.4): area-weighted centroid of the ERA5 0.25 deg grid cells
+Coordinates: area-weighted centroid of the ERA5 0.25 deg grid cells
 intersecting the district polygon.  Fallback: polygon centroid on a cos(lat)
 scaled plane.  The method actually used is recorded in the manifest.
 
-Authority: plan/SRS.md §2.4, §4.2-§4.4 ; plan/GUIDE.md Step 2.
+Authority: README section 9 (coordinates and the 2016 reorganisation).
 """
 
 from __future__ import annotations
@@ -347,7 +347,7 @@ def main() -> None:
     excluded = sorted(set(geo_names) - set(crosswalk["geojson_name"]))
     log(f"  excluded GeoJSON features (not in DES file): {excluded}")
 
-    # -- 2.6 partition note (SRS §4.3, GUIDE Step 2.3) -----------------------
+    # -- 2.6 partition note ----------------------------------------------
     (C.GEO / "PARTITION_NOTE.md").write_text(
         "# The 2016 district reorganisation - what it is and what was done\n\n"
         "## Verdict\n\n"
@@ -420,7 +420,7 @@ def main() -> None:
             },
             "centroid_method": sorted(cent["centroid_method"].unique().tolist()),
             "centroid_note": "area-weighted centroid of intersecting ERA5 0.25 deg "
-            "grid cells (SRS §2.4 preferred method)",
+            "grid cells (the preferred method)",
             "era_rule": (
                 "seasons from 2016-17 are post2016; 2001-02..2015-16 are "
                 "pre2016; earlier seasons would be pre2001 (the delivered file "

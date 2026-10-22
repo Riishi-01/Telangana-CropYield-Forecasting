@@ -34,7 +34,7 @@ the dashboard.
 Output:
     data/processed/forecast_series.json
 
-Authority: plan/IMPROVEMENT_PLAN.md P3-12, P3-13 ; plan/SRS.md §5.6.
+Authority: README section 5.4 (the 2026 forecast) and 5.5 (how it is drawn).
 """
 
 from __future__ import annotations

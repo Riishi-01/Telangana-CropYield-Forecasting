@@ -9,7 +9,7 @@ blocked by the browser's CORS rules when the page is opened from disk, so
 inlining the payloads keeps the dashboard working from `file://` as well as
 from a static host, with no server anywhere.
 
-Authority: plan/SRS.md §7.4 ; plan/GUIDE.md Step 11.
+Authority: README section 6 (the dashboard).
 """
 
 from __future__ import annotations
@@ -428,7 +428,7 @@ def main() -> None:
     }
 
     # -- window sensitivity: NOT shipped ---------------------------------------
-    # The window-sensitivity panel was retired from the page (ERRATA C14).  The
+    # The window-sensitivity panel was retired from the page .  The
     # analysis itself is unchanged and stays in the README (section 5) and in
     # figures/f5_window_sensitivity.png; only the dashboard payload is dropped,
     # so the bundle carries nothing the page cannot use.

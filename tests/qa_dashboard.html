@@ -109,7 +109,7 @@ function run(d, w) {
 
   results.leafletPaths = d.querySelectorAll("#map path").length;
   results.mapLabels = d.querySelectorAll("#map .district-label").length;
-  // the retired sections must be gone (ERRATA C14)
+  // the retired sections must be gone
   results.windowSectionPresent = !!d.getElementById("windowHead");
   results.windowTablePresent = !!d.getElementById("windowTable");
   results.statsSectionPresent = !!d.getElementById("statsHead");
@@ -138,7 +138,7 @@ function run(d, w) {
     d.getElementById("cropSelect").options, function (o) { return o.textContent.trim(); }
   );
 
-  // the crop identity strip (SRS §7.1, Okabe-Ito): one fixed colour per crop
+  // the crop identity strip (Okabe-Ito): one fixed colour per crop
   results.cropChips = d.querySelectorAll("#cropStrip .cropchip").length;
   // the browser normalises a hex set via style.background into rgb(), so the
   // comparison is made on the rgb() form

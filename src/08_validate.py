@@ -1,6 +1,6 @@
 """Step 08 - Out-of-sample validation against a district-crop median baseline.
 
-Split (SRS §5.5) - CHRONOLOGICAL ONLY, never random:
+Split - CHRONOLOGICAL ONLY, never random:
 
     train : seasons <= 2019-20   (2016-17 .. 2019-20, 4 seasons)
     test  : seasons >= 2020-21   (2020-21 .. 2022-23, 3 seasons)
@@ -15,7 +15,7 @@ Metric : out-of-sample RMSE and MAE vs. the baseline, and the skill score
 
 A positive skill is NOT guaranteed.  If the skill is <= 0 the weather-only
 model does not beat the median, and that is reported as the finding
-(GUIDE §9).
+.
 
 CONVENTION for the test period: the YEAR fixed effects of the test years
 are not estimable from the train data.  Test rows are therefore predicted
@@ -23,7 +23,7 @@ with the reference year's effect (its year dummy is zero), i.e. the
 prediction is conditional on no additional year effect beyond the reference.
 This is stated in the README and in the dashboard.
 
-Authority: plan/SRS.md §5.5 ; plan/GUIDE.md Step 9.
+Authority: README section 5 (validation, chronological split only).
 """
 
 from __future__ import annotations

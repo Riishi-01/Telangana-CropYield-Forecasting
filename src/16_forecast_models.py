@@ -29,7 +29,7 @@ GATE 2 - APPLICABILITY AT 2026 RAINFALL.
 Output:
     data/processed/forecast_models.json
 
-Authority: plan/IMPROVEMENT_PLAN.md P1-9, P1-10 ; plan/SRS.md §5.4, §5.5.
+Authority: README section 5.4 (one model per crop).
 """
 
 from __future__ import annotations
@@ -99,7 +99,7 @@ def _rmse(a: np.ndarray) -> float:
 
 
 def _skill(pred: np.ndarray, actual: np.ndarray, base: np.ndarray) -> float:
-    """Skill score against the district-crop median baseline (SRS §5.5)."""
+    """Skill score against the district-crop median baseline."""
     denom = _rmse(actual - base)
     if denom <= 0:
         return float("nan")

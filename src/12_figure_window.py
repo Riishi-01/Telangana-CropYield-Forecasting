@@ -7,7 +7,7 @@ a p-value, so the panels use a single sequential ramp (YlOrRd is reserved for
 deficit in the maps). Colormap: sequential blues, one row per crop, one
 column per window, cell value = p(b2) and whether a vertex is supported.
 
-Authority: plan/SRS.md §5.1 ; plan/GUIDE.md Step 7.
+Authority: README section 5 (season-window sensitivity).
 """
 
 from __future__ import annotations

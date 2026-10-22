@@ -1,6 +1,6 @@
 """Step 07 - Stage 2: augmented model with dry-spell, heat and VPD features.
 
-Stage 2 adds to the Stage 1 specification (SRS §5.4):
+Stage 2 adds to the Stage 1 specification:
 
     + dry_run_max + dry_days_ge5 + heat_days + vpd_mean + rain_days
 
@@ -14,10 +14,10 @@ dry-spell index explains yield better than cumulative seasonal rainfall.
                              crops.  This is ALSO the headline finding.
 
 Both outcomes are valid deliverables.  Neither is suppressed or reframed
-(GUIDE §8).  An F-test on the added block is reported alongside dR2 because the
+.  An F-test on the added block is reported alongside dR2 because the
 two models differ by five parameters.
 
-Authority: plan/SRS.md §5.4 ; plan/GUIDE.md Step 8.
+Authority: README section 5 (Stage 2).
 """
 
 from __future__ import annotations

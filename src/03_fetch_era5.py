@@ -13,7 +13,7 @@ Outputs:
   data/interim/weather_daily.parquet              district_slug x date
   data/manifests/weather_fetch.json                per-fetch provenance
 
-Authority: plan/SRS.md §3.2, §5.1 ; plan/GUIDE.md Step 4.
+Authority: README section 2 (sources) and section 3 (the weather window).
 """
 
 from __future__ import annotations

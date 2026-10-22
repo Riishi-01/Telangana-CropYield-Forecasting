@@ -4,7 +4,7 @@ Joins the preprocessed yields (data/processed/crops_kharif_clean.parquet) to the
 ERA5 season features on district x season, tags the era, and adds the
 leakage-guarded yield anomaly.
 
-LEAKAGE GUARD (SRS §5.5): the anomaly denominator (the median yield for a
+LEAKAGE GUARD: the anomaly denominator (the median yield for a
 district-crop) is computed on the TRAIN seasons only (2016-17..2019-20) and is
 then applied to every row of that district-crop.  Test-period rows never
 influence their own baseline.
@@ -16,7 +16,7 @@ Outputs:
                                             (no repeated weather) - the
                                             no-redundancy table for reading
 
-Authority: plan/SRS.md §5.5, §6.1-§6.3 ; plan/GUIDE.md Step 6.
+Authority: README section 4 (leakage guard) and section 3 (the panel).
 """
 
 from __future__ import annotations
