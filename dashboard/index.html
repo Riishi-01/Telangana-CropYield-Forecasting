@@ -30,6 +30,7 @@
     <div class="control">
       <label for="cropSelect">Crop</label>
       <select id="cropSelect"></select>
+      <div id="cropStrip" class="cropstrip" role="group" aria-label="Crop identity colour"></div>
     </div>
     <div class="control">
       <label for="seasonSelect">Season</label>
@@ -60,6 +61,9 @@
     </div>
     <div id="map" role="application"
          aria-label="Choropleth map of Telangana districts. The table below carries the same values in text form."></div>
+    <p class="section-note section-note--boundary" id="mapBoundaryNote">This layer shows the 32
+      post-2016 districts. The two pre-2016 seasons in the dataset are 9 undivided parent
+      districts and are <strong>not spatially comparable</strong> to this layer.</p>
     <div class="legend" id="mapLegend">
       <div class="legend__scale" id="legendScale"></div>
       <p class="legend__caption" id="legendCaption">—</p>

@@ -194,6 +194,55 @@ a { color: var(--color-accent); }
   margin-left: auto;
 }
 
+/* Crop identity strip (SRS §7.1, Okabe-Ito). One fixed colour per crop,
+   shown here so the same colour is recognisable in the curve, the series and
+   the selector. Clicking a chip switches crop. */
+.cropstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  max-width: 22rem;
+}
+
+.cropchip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.cropchip:hover {
+  color: var(--color-ink);
+  border-color: var(--color-rule);
+}
+
+.cropchip:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+
+.cropchip--on {
+  color: var(--color-ink);
+  font-weight: 600;
+  border-color: var(--color-rule-strong);
+}
+
+.cropchip__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+}
+
 .ghost-btn {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -315,6 +364,17 @@ main {
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
   max-width: 62ch;
+}
+
+/* The 2016 boundary discontinuity must be visible on the map itself, not
+   only in the disclosure list: a viewer who does not know it will misread
+   the choropleth. */
+.section-note--boundary {
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-rule-strong);
+  font-size: var(--text-xs);
+  line-height: 1.5;
 }
 
 .section-note--inline {

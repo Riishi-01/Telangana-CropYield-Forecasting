@@ -100,6 +100,12 @@ def figure_f1(panel, summary, marker):
         s1 = stage1.get(crop, {}).get("primary", {})
         s2 = stage2.get(crop, {})
 
+        # the 2026 implied-yield range, published only where the curve has a
+        # statistically supported shape (same gate as the vertex)
+        implied = None
+        if marker is not None and s1:
+            implied = cfg.implied_2026_range(panel, marker, crop, s1)
+
         for c, (title, coef) in enumerate(
             [
                 ("Stage 1 · rainfall quadratic", s1),
@@ -113,10 +119,13 @@ def figure_f1(panel, summary, marker):
 
             b1 = float(coef["b1"])
             b2 = float(coef["b2"])
+            # crop identity colour (SRS §7.1, Okabe-Ito): a crop keeps the
+            # same colour in every figure and in the dashboard
+            crop_col = cfg.CROP_COLORS.get(crop, cfg.C_CURVE)
 
             ax.scatter(
                 d["rain_mm"], d["yield"], s=16, alpha=0.55,
-                color=cfg.C_CURVE, edgecolor="none", zorder=2,
+                color=crop_col, edgecolor="none", zorder=2,
                 label="district-season observations",
             )
 
@@ -141,7 +150,7 @@ def figure_f1(panel, summary, marker):
             r2bar = float(coef.get("rain_sq_mean", (d["rain_mm"] ** 2).mean()))
             x = np.linspace(d["rain_mm"].min(), d["rain_mm"].max(), 200)
             y = y0 + b1 * (x - rbar) + b2 * (x**2 - r2bar)
-            ax.plot(x, y, color=cfg.C_CURVE, lw=1.8, zorder=3, label="fitted quadratic")
+            ax.plot(x, y, color=crop_col, lw=1.8, zorder=3, label="fitted quadratic")
 
             # y limits: robust to single extreme observations, which are
             # annotated rather than silently dropped
@@ -166,7 +175,7 @@ def figure_f1(panel, summary, marker):
             vertex = coef.get("vertex_mm")
             if vertex and coef.get("vertex_reported"):
                 yv = y0 + b1 * (vertex - rbar) + b2 * (vertex**2 - r2bar)
-                ax.scatter([vertex], [yv], s=70, color=cfg.C_CURVE, zorder=5,
+                ax.scatter([vertex], [yv], s=70, color=crop_col, zorder=5,
                            edgecolor="white", linewidth=1.2)
                 lo, hi = coef.get("vertex_ci95_mm", [None, None])
                 note = f"R* = {vertex:,.0f} mm"
@@ -185,20 +194,52 @@ def figure_f1(panel, summary, marker):
                     bbox=dict(boxstyle="round,pad=0.3", fc="#fff8e1", ec="#c9a227", alpha=0.95),
                 )
 
-            # 2026 rainfall marker
+            # 2026 rainfall marker (P4-15: a BAND, never a dashed line
+            # asserting a value). The rainfall range across districts is
+            # shaded; where the fitted curve has a statistically supported
+            # shape, the implied yield is drawn as a band with the state-mean
+            # reading as a marker inside it.
             if marker_mean is not None:
                 lo26, hi26, mean26 = marker_mean
                 ax.axvspan(lo26, hi26, color=cfg.C_MARKER_2026, alpha=0.07, zorder=1)
-                ax.axvline(mean26, color=cfg.C_MARKER_2026, ls="--", lw=1.4, zorder=4)
+                ax.axvline(mean26, color=cfg.C_MARKER_2026, ls=":", lw=1.2, zorder=4)
                 if c == 0:
                     y26 = y0 + b1 * (mean26 - rbar) + b2 * (mean26**2 - r2bar)
+                    if implied is not None:
+                        # the implied yield band: the range of readings
+                        # across the 32 districts, in % of each district's
+                        # own normal, mapped onto the yield axis. It is
+                        # localised at the 2026 rainfall position so it
+                        # cannot be misread as a data band.
+                        p_lo = implied["pct_p10"]
+                        p_hi = implied["pct_p90"]
+                        y_lo = y26 * (1 + p_lo / 100.0)
+                        y_hi = y26 * (1 + p_hi / 100.0)
+                        span = x_hi - x_lo
+                        frac = (mean26 - x_lo) / span if span else 0.5
+                        half = 0.035
+                        ax.axhspan(
+                            min(y_lo, y_hi), max(y_lo, y_hi),
+                            xmin=max(0.0, frac - half), xmax=min(1.0, frac + half),
+                            zorder=1, color=cfg.C_MARKER_2026, alpha=0.16,
+                        )
                     ax.scatter([mean26], [y26], s=60, facecolor="none",
                                edgecolor=cfg.C_MARKER_2026, lw=1.6, zorder=6)
-                    ax.annotate(
-                        f"2026 observed rainfall\n{mean26:,.0f} mm (state mean)",
-                        xy=(mean26, y26), xytext=(6, -34), textcoords="offset points",
-                        fontsize=7.5, color=cfg.C_MARKER_2026,
-                    )
+                    if implied is not None:
+                        ax.annotate(
+                            f"2026 position on fitted curve\n"
+                            f"{implied['state_mean_pct_vs_normal']:+.1f}% vs normal "
+                            f"(band {p_lo:+.1f}% to {p_hi:+.1f}%)",
+                            xy=(mean26, y26), xytext=(6, -34), textcoords="offset points",
+                            fontsize=7.5, color=cfg.C_MARKER_2026,
+                        )
+                    else:
+                        ax.annotate(
+                            f"2026 observed rainfall\n{mean26:,.0f} mm (state mean)\n"
+                            "no implied yield for this crop",
+                            xy=(mean26, y26), xytext=(6, -34), textcoords="offset points",
+                            fontsize=7.5, color=cfg.C_MARKER_2026,
+                        )
 
             unit = d["yield_unit"].iloc[0]
             ax.set_ylabel(f"yield ({unit})")
@@ -210,11 +251,13 @@ def figure_f1(panel, summary, marker):
                 ax.set_xlabel("kharif rainfall, 1 Jun – 30 Sep (mm)")
 
     txt = (
-        "Response curve fitted on observed kharif yields (district + season fixed effects). "
+        "Response curve fitted on observed kharif yields (district + year fixed effects). "
         "2026 rainfall is ERA5 observed; any implied yield is a reading of the fitted curve, "
-        "not a validated forecast — the extrapolation gap is 3+ years. "
+        "not a validated forecast — the extrapolation gap is 4+ years, and it is published only "
+        "for a crop whose curve has a statistically supported shape. "
         "ERA5 is a 0.25° reanalysis, not station gauge data. "
-        "Effects are rainfall's marginal association conditional on all other factors being average."
+        "No irrigation data is used, so effects are rainfall's marginal association conditional "
+        "on all other factors being average."
     )
     fig.text(0.005, 0.002, txt, fontsize=6.6, color="#444444", va="bottom", wrap=True)
     fig.tight_layout(rect=(0, 0.035, 1, 1))
@@ -297,14 +340,14 @@ def figure_f3(summary):
 
     rmse_model = [val[c]["rmse_model"] for c in crops]
     rmse_base = [val[c]["rmse_baseline"] for c in crops]
-    rmse_model_nf = [val[c]["no_season_fe"]["rmse_model"] for c in crops]
+    rmse_model_nf = [val[c]["no_year_fe"]["rmse_model"] for c in crops]
     skill = [val[c]["skill_rmse"] for c in crops]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.0),
                                    gridspec_kw={"width_ratios": [1.35, 1]})
 
     ax1.bar(x - w, rmse_model, w, color=cfg.C_CURVE, label="model (with season FE)")
-    ax1.bar(x, rmse_model_nf, w, color="#9ecae1", label="model (no season FE)")
+    ax1.bar(x, rmse_model_nf, w, color="#9ecae1", label="model (no year FE)")
     ax1.bar(x + w, rmse_base, w, color="#bdbdbd", label="district-crop median baseline")
     ax1.set_xticks(x)
     ax1.set_xticklabels([crop_label(c) for c in crops], rotation=20, ha="right")

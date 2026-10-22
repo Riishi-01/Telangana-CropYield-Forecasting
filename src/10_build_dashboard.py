@@ -172,7 +172,7 @@ def main() -> None:
         models[crop] = {
             "stage1": s1.get("primary", {}),
             "stage1_robust": {
-                "no_season_fe": s1.get("no_season_fe", {}),
+                "no_year_fe": s1.get("no_year_fe", {}),
                 "linear_only": s1.get("linear_only", {}),
                 "extended_panel": s1.get("extended_panel", {}),
             },
@@ -218,6 +218,48 @@ def main() -> None:
             "n_districts": int(len(m)),
         }
 
+        # -- the 2026 implied-yield range, per crop (P4-15) ------------------
+        # The 2026 rainfall is OBSERVED (ERA5). What is implied by the fitted
+        # curve is NOT a point value - it is a range, because the curve is
+        # read at each district's own 2026 rainfall and each district has a
+        # different reading.  The range is expressed as % of that district's
+        # own median yield, so it is a like-for-like comparison, and the point
+        # estimate (the state-mean rainfall read on the curve) sits inside it.
+        # This is a READING of the fitted relationship, not a forecast.
+        #
+        # GATE (P1-7 / P3-13): the range is published ONLY for a crop whose
+        # Stage-1 curvature is statistically supported (b2 < 0 and p < 0.05 -
+        # the same rule that gates the vertex).  Reading a yield off a curve
+        # with no supported relationship is not a reading, it is an
+        # extrapolation: for arhar, whose quadratic term is not significant,
+        # the 2026 reading returns NEGATIVE yields for 6 of 32 districts,
+        # which is physically impossible and must not be published.  Those
+        # crops show the observed 2026 rainfall position and say plainly that
+        # no implied yield is offered.
+        marker["implied_by_crop"] = {}
+        marker["implied_withheld"] = {}
+        for crop, s1 in (summary.get("crops") or {}).items():
+            st1 = s1.get("primary") or {}
+            imp = cfg.implied_2026_range(primary, m, crop, st1)
+            if imp is None:
+                marker["implied_withheld"][crop] = {
+                    "p2": st1.get("p2"),
+                    "reason": (
+                        "the Stage-1 quadratic term is not statistically "
+                        f"significant for this crop (p = {st1.get('p2', float('nan')):.3f}), "
+                        "so the fitted curve has no supported shape to read a "
+                        "yield from. The 2026 rainfall position is shown; no "
+                        "implied yield is offered."
+                    ),
+                }
+                continue
+            imp["note"] = (
+                "A reading of the fitted curve at each district's observed "
+                "2026 rainfall, expressed as % of the curve read at that "
+                "district's own median rainfall. Not a forecast."
+            )
+            marker["implied_by_crop"][crop] = imp
+
     # -- metadata / disclosures ----------------------------------------------
     meta = {
         "data_version": VERSION,
@@ -254,7 +296,9 @@ def main() -> None:
             "aggregates": "District aggregates, not farm-level.",
             "boundary": (
                 "District boundaries were revised in 2016 and 2018. Pre- and post-revision periods "
-                "are modelled as distinct fixed-effect groups, not a continuous panel."
+                "are modelled as distinct fixed-effect groups, not a continuous panel. The choropleth "
+                "shows the 32 post-2016 districts; the two pre-2016 seasons are 9 undivided parent "
+                "districts and are NOT spatially comparable to this layer."
             ),
             "sowing": (
                 "Sowing window ≠ season. Jun–Sep is the official kharif sowing window; cotton and "
@@ -309,6 +353,7 @@ def main() -> None:
         "meta": meta,
         "crops": crops,
         "crop_labels": cfg.CROP_LABELS,
+        "crop_colors": cfg.CROP_COLORS,
         "modelled_crops": [c for c in cfg.MODELLED_CROPS if c in crops],
         "seasons": seasons,
         "districts": districts,

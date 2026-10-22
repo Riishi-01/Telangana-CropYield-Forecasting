@@ -93,6 +93,7 @@
 
   var els = {
     crop: document.getElementById("cropSelect"),
+    cropStrip: document.getElementById("cropStrip"),
     season: document.getElementById("seasonSelect"),
     metric: document.getElementById("metricSelect"),
     reset: document.getElementById("resetBtn"),
@@ -642,7 +643,7 @@
         y: curve,
         type: "scatter",
         mode: "lines",
-        line: { color: "#1f77b4", width: 2.4 },
+        line: { color: cropColor(state.crop), width: 2.4 },
         name: "fitted quadratic (Stage 1)",
         hovertemplate: "rainfall %{x:.0f} mm<br>expected yield %{y:.3f}<extra></extra>"
       });
@@ -654,7 +655,7 @@
           y: [vy],
           type: "scatter",
           mode: "markers",
-          marker: { color: "#1f77b4", size: 13, line: { color: "#fffdf9", width: 2 } },
+          marker: { color: cropColor(state.crop), size: 13, line: { color: "#fffdf9", width: 2 } },
           name: "rainfall optimum R*",
           hovertemplate: "R* = %{x:.0f} mm<extra></extra>"
         });
@@ -734,13 +735,12 @@
       }
     }
 
-    // 2026 marker
-    var markerBand = null;
+    // 2026 marker (P4-15: a BAND, never a dashed line asserting a value)
     if (D.marker && D.marker.available) {
       var m26 = D.marker.state_mean;
       var lo26 = D.marker.p10;
       var hi26 = D.marker.p90;
-      markerBand = { lo: lo26, hi: hi26, mean: m26 };
+      // the observed 2026 rainfall range across districts, as a shaded band
       shapes.push({
         type: "rect",
         x0: lo26, x1: hi26, y0: 0, y1: 1, yref: "paper",
@@ -751,12 +751,31 @@
       shapes.push({
         type: "line",
         x0: m26, x1: m26, y0: 0, y1: 1, yref: "paper",
-        line: { color: "#111111", width: 1.4, dash: "dash" }
+        line: { color: "#111111", width: 1.2, dash: "dot" }
       });
-      if (isModelled(crop)) {
+      // the implied-yield range, published only where the fitted curve is
+      // statistically supported (see the bundle's implied_withheld)
+      var imp = D.marker.implied_by_crop ? D.marker.implied_by_crop[crop] : null;
+      if (imp && isModelled(crop)) {
         var s = modelFor(crop).stage1;
         var y26 = s.mean_fitted + s.b1 * (m26 - s.rain_mean_mm) +
           s.b2 * (Math.pow(m26, 2) - s.rain_sq_mean);
+        // the band spans the range of readings across districts, in %
+        // of each district's own normal
+        var bandLo = imp.state_mean_pct_vs_normal + imp.pct_p10 - imp.pct_median;
+        var bandHi = imp.state_mean_pct_vs_normal + imp.pct_p90 - imp.pct_median;
+        // place the band vertically around the point reading
+        var halfLo = (y26 * bandLo) / 100;
+        var halfHi = (y26 * bandHi) / 100;
+        shapes.push({
+          type: "rect",
+          x0: m26 - 26, x1: m26 + 26,
+          y0: Math.min(y26 + halfLo, y26 + halfHi),
+          y1: Math.max(y26 + halfLo, y26 + halfHi),
+          fillcolor: "rgba(17,17,17,0.13)",
+          line: { width: 0 },
+          layer: "below"
+        });
         traces.push({
           x: [m26],
           y: [y26],
@@ -767,7 +786,30 @@
           hovertemplate:
             "2026 rainfall " + fmt(m26, 0) + " mm (state mean)<br>" +
             "reading of the fitted curve: %{y:.3f} " + unitOf(crop) +
+            "<br>across the 32 districts the reading spans " +
+            fmt(imp.pct_p10, 1) + "% to " + fmt(imp.pct_p90, 1) +
+            "% of each district's own normal" +
             "<br><i>not a forecast</i><extra></extra>"
+        });
+        annotations.push({
+          x: m26, y: y26,
+          xref: "x", yref: "y",
+          text: "2026 position on the fitted curve",
+          showarrow: false,
+          xanchor: "left", yanchor: "bottom",
+          xshift: 10, yshift: 6,
+          font: { family: "IBM Plex Mono, monospace", size: 9, color: "#16181d" }
+        });
+      } else if (isModelled(crop)) {
+        // no supported curve: the rainfall position is shown, but no implied
+        // yield is offered for this crop
+        annotations.push({
+          x: m26, y: 0.03, xref: "x", yref: "paper",
+          text: "2026 rainfall — no implied yield for this crop",
+          showarrow: false,
+          xanchor: "left", yanchor: "bottom",
+          xshift: 8,
+          font: { family: "IBM Plex Mono, monospace", size: 9, color: "#6d7481" }
         });
       }
     }
@@ -1163,7 +1205,41 @@
     return crop;
   }
 
+  // Crop identity colour (Okabe-Ito, SRS §7.1). A crop keeps the same colour
+  // in every chart and in the selector strip, and switching crops never
+  // repaints the others.
+  function cropColor(crop) {
+    if (D.crop_colors && D.crop_colors[crop]) return D.crop_colors[crop];
+    return "#1f77b4";
+  }
+
+  function renderCropStrip() {
+    if (!els.cropStrip) return;
+    els.cropStrip.innerHTML = "";
+    D.crops.forEach(function (c) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cropchip" + (c === state.crop ? " cropchip--on" : "");
+      b.setAttribute("aria-pressed", c === state.crop ? "true" : "false");
+      var sw = document.createElement("span");
+      sw.className = "cropchip__swatch";
+      sw.style.background = cropColor(c);
+      var t = document.createElement("span");
+      t.textContent = cropTitle(c);
+      b.appendChild(sw);
+      b.appendChild(t);
+      b.addEventListener("click", function () {
+        state.crop = c;
+        els.crop.value = c;
+        state.pinned = null;
+        renderAll();
+      });
+      els.cropStrip.appendChild(b);
+    });
+  }
+
   function renderAll() {
+    renderCropStrip();
     styleAll();
     renderLegend();
     renderReadout();
@@ -1175,7 +1251,7 @@
     if (isModelled(state.crop)) {
       var s1 = m.stage1;
       els.curveNote.textContent =
-        "District and season fixed effects; the curve is the mean-centred effect of rainfall, " +
+        "District and year fixed effects; the curve is the mean-centred effect of rainfall, " +
         "with every other factor held at its average. " +
         (s1.vertex_reported
           ? "The rainfall optimum R* = " + fmt(s1.vertex_mm, 0) + " mm is statistically supported for this crop."
