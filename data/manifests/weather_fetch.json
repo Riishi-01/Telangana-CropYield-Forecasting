@@ -5,7 +5,7 @@
   ],
   "artifact": "weather_daily.parquet",
   "batch_size": 8,
-  "created_utc": "2026-10-22T03:21:02+00:00",
+  "created_utc": "2026-10-22T03:22:37+00:00",
   "daily_variables": [
     "precipitation_sum",
     "temperature_2m_max",
@@ -18,7 +18,7 @@
     {
       "bytes": 1045277,
       "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T03:21:01+00:00",
+      "fetched_utc": "2026-10-22T03:22:37+00:00",
       "max_coordinate_deviation_deg": 0.0401,
       "n_blocks_returned": 8,
       "n_coordinates": 8,
@@ -32,7 +32,7 @@
     {
       "bytes": 1045381,
       "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T03:21:01+00:00",
+      "fetched_utc": "2026-10-22T03:22:37+00:00",
       "max_coordinate_deviation_deg": 0.0405,
       "n_blocks_returned": 8,
       "n_coordinates": 8,
@@ -46,7 +46,7 @@
     {
       "bytes": 1045000,
       "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T03:21:01+00:00",
+      "fetched_utc": "2026-10-22T03:22:37+00:00",
       "max_coordinate_deviation_deg": 0.032,
       "n_blocks_returned": 8,
       "n_coordinates": 8,
@@ -60,7 +60,7 @@
     {
       "bytes": 1045141,
       "end_date": "2023-10-31",
-      "fetched_utc": "2026-10-22T03:21:02+00:00",
+      "fetched_utc": "2026-10-22T03:22:37+00:00",
       "max_coordinate_deviation_deg": 0.0619,
       "n_blocks_returned": 8,
       "n_coordinates": 8,
@@ -74,7 +74,7 @@
     {
       "bytes": 164592,
       "end_date": "2026-09-30",
-      "fetched_utc": "2026-10-22T03:21:02+00:00",
+      "fetched_utc": "2026-10-22T03:22:37+00:00",
       "max_coordinate_deviation_deg": 0.0619,
       "n_blocks_returned": 32,
       "n_coordinates": 32,

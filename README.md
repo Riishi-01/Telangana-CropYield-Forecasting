@@ -341,6 +341,11 @@ bash tests/run_dashboard_qa.sh                     # 29 headless checks
   shipped Stage 1 fit.
 - The panel, the model summary and every manifest carry their own SHA-256 in
   `data/manifests/`.
+- **What does and does not reproduce.** The data artefacts rebuild byte-identically
+  (`panel_v1.1.0.parquet`, `crops_kharif_clean.csv`). The manifests and the dashboard
+  bundle re-stamp their `created_utc` field on every run, so a rebuild leaves those
+  seven files modified in git — that is by design, since the SRS requires every fetch
+  to record its UTC timestamp. Nothing else differs.
 
 **Environment note:** `data/raw/`, `data/interim/` and `data/processed/` are
 gitignored — reproducibility is carried by the manifests and checksums, not by
