@@ -4,7 +4,7 @@
     "09-30"
   ],
   "artifact": "features.parquet",
-  "created_utc": "2026-10-22T07:45:17+00:00",
+  "created_utc": "2026-10-22T08:00:31+00:00",
   "districts": 32,
   "dry_spell_window": [
     "06-01",
