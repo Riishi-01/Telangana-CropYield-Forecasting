@@ -4,7 +4,7 @@
     "09-30"
   ],
   "artifact": "features.parquet",
-  "created_utc": "2026-10-22T03:22:38+00:00",
+  "created_utc": "2026-10-22T04:40:25+00:00",
   "districts": 32,
   "dry_spell_window": [
     "06-01",
@@ -26,5 +26,5 @@
     "2022-23",
     "2023-24"
   ],
-  "sha256": "057fa98c2688b131016d61770330e4085a5c5e3c4f9b8f0e422f8689250ce16b"
+  "sha256": "61191bb19a301bde1d853aab3c2501cbee119c8f84073c6019f6bb4d1d911326"
 }

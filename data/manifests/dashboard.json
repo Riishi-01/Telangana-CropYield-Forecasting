@@ -1,8 +1,8 @@
 {
   "artifact": "dashboard",
   "bundle_js": "dashboard/data/bundle.js",
-  "bundle_sha256": "494201019ac115d93576792b50e5fe6c124ce129af91be4a7373038f67c9ed19",
-  "created_utc": "2026-10-22T03:22:47+00:00",
+  "bundle_sha256": "d8534e41594c98c5abe6062519a3ac17ebd501a9024b6ffe6870f18dbdac6764",
+  "created_utc": "2026-10-22T04:40:41+00:00",
   "crops": 4,
   "data_version": "1.1.0",
   "districts": 32,
@@ -21,7 +21,7 @@
     "Rice"
   ],
   "offline": "all libraries, fonts and data are served from the repository; no CDN",
-  "panel_sha256": "516cbfc76cb5048ba410e768ae48b35eab01db626561b7f2840b6336031066fc",
+  "panel_sha256": "da50c44b25f3d9e3340aa9f26cf46b471b5c3c3db4500f8c9f6b666939497dff",
   "seasons": [
     "2016-17",
     "2017-18",

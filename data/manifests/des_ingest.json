@@ -1,6 +1,6 @@
 {
   "artifact": "crops_kharif_clean",
-  "created_utc": "2026-10-22T03:22:35+00:00",
+  "created_utc": "2026-10-22T04:40:23+00:00",
   "crop_groups_in_file": [
     "Arhar/Tur",
     "Banana",
@@ -98,7 +98,7 @@
     "2021-22",
     "2022-23"
   ],
-  "sha256": "59a137dab1a1a9eaee4657b1a10fd5a409868db992513836ee18c3bc36fc51e1",
+  "sha256": "1078c97bcc75018f7b750e956c1f093cb72531ac07aaa1e9c17878735b2cbec6",
   "source_file": "data/horizontal_crop_vertical_year_report.xls",
   "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
   "yield_source": "DES district-wise kharif crop production (Directorate of Economics & Statistics, Govt. of India)"

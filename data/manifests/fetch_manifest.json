@@ -8,8 +8,8 @@
     "era5_grid_area_weighted_centroid"
   ],
   "clean_dataset": "crops_kharif_clean",
-  "clean_dataset_sha256": "59a137dab1a1a9eaee4657b1a10fd5a409868db992513836ee18c3bc36fc51e1",
-  "created_utc": "2026-10-22T03:22:38+00:00",
+  "clean_dataset_sha256": "1078c97bcc75018f7b750e956c1f093cb72531ac07aaa1e9c17878735b2cbec6",
+  "created_utc": "2026-10-22T04:40:26+00:00",
   "crops": [
     "Cotton(lint)",
     "Arhar/Tur",
@@ -26,6 +26,7 @@
     "2014-15",
     "2022-23"
   ],
+  "fitted_range_note": "The MODELS are fitted on the primary panel (2016-17 -> 2022-23, 868 rows). The dataset covers 2014-15 -> 2022-23 (940 rows); the earlier seasons are used for robustness only (extended-panel spec).",
   "geojson_sha256": "e228271e9929f7167bc1327f0b0faba5c17fb94dc999ac9c026293b4e9dfd1e1",
   "geojson_source_url": "https://raw.githubusercontent.com/gpavanb1/Telangana-Visualisation/master/data/Telangana.geojson",
   "primary_panel": [
@@ -36,7 +37,7 @@
   "rows": 940,
   "rows_primary_panel": 868,
   "seed": 0,
-  "sha256": "516cbfc76cb5048ba410e768ae48b35eab01db626561b7f2840b6336031066fc",
+  "sha256": "da50c44b25f3d9e3340aa9f26cf46b471b5c3c3db4500f8c9f6b666939497dff",
   "temp_window": [
     "2014-06-01",
     "2023-10-31"
@@ -50,11 +51,13 @@
     "2019-20"
   ],
   "weather_endpoint": "https://archive-api.open-meteo.com/v1/archive",
-  "weather_fetched_utc": "2026-10-22T03:22:37+00:00",
+  "weather_fetched_utc": "2026-10-22T04:40:25+00:00",
   "weather_licence": "CC BY 4.0 (ERA5 via Open-Meteo)",
   "weather_rows": 113984,
   "weather_sha256": "aaa5a859a9cedaf116976328068d64f32bf8d0593d30081455eb63a95d25f033",
   "weather_source": "open-meteo/era5",
+  "year_mapping": "season Y-YY == Jun-Oct of calendar year Y (season opens in year Y)",
+  "year_mapping_source": "SRS \u00a75.1 Telangana District Collectorate (Kamareddy), agricultural year June-May, kharif sown June-September",
   "yield_file_sha256": "eb57d0f7c548db14f20fb134d99c61b0e25066f1d4c6363cced633ed955be7a1",
   "yield_source": "DES district-wise kharif crop production (Directorate of Economics & Statistics, Govt. of India)"
 }
