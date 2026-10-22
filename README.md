@@ -7,7 +7,8 @@ across Telangana's districts, with an interactive dashboard for exploring it. Yi
 from the Directorate of Economics & Statistics (DES); rainfall comes from ERA5 reanalysis
 via the Open-Meteo archive API. Nothing here is a forecast.
 
-- **DATA_VERSION** `1.0.0`
+- **DATA_VERSION** `1.1.0`
+- **Scope** Telangana · Kharif · 2014-15 → 2022-23 · four crops (Cotton lint, Arhar/Tur, Moong, Rice)
 - **Primary panel** 2016-17 → 2022-23, 32 post-reorganisation districts
 - **Extended panel** 2014-15 → 2022-23, era-tagged district ids (robustness only)
 - **Interactive explorer** `dashboard/index.html` — open it directly, no server needed
@@ -23,12 +24,13 @@ via the Open-Meteo archive API. Nothing here is a forecast.
 
 ## 1. What this is
 
-A reproducible pipeline that joins district-level kharif crop yields to ERA5 rainfall
-features, estimates a fixed-effects rainfall–yield response curve, tests whether
-dry-spell and heat-stress features add anything beyond cumulative rainfall, and
-validates the model out of sample against a median baseline. The interactive dashboard
-is the readable face of the same numbers — it contains no value that is not in
-`data/processed/`.
+A reproducible pipeline that preprocesses the DES district-wise kharif statistics into a
+clean 4-crop dataset, joins it to ERA5 rainfall features, estimates a fixed-effects
+rainfall–yield response curve, tests whether dry-spell and heat-stress features add
+anything beyond cumulative rainfall, checks whether the conclusion survives a different
+season window, and validates the model out of sample against a median baseline. The
+interactive dashboard is the readable face of the same numbers — it contains no value
+that is not in `data/processed/`.
 
 ## 2. Data sources, licence and attribution
 
@@ -42,11 +44,48 @@ is the readable face of the same numbers — it contains no value that is not in
 **ERA5 is a reanalysis, not a station observation.** The delivered DES file is an HTML
 document despite its `.xls` extension and is parsed with `pandas.read_html()`.
 
-## 3. Method
+## 3. The preprocessed dataset
+
+`data/processed/crops_kharif_clean.csv` — the deliverable. **940 rows × 13 columns.**
+
+| Column | Meaning |
+|---|---|
+| `season` | `2014-15` … `2022-23` |
+| `season_year` | the year the kharif season opens (2014 = 2014-15) |
+| `district`, `district_slug` | `Adilabad` / `adilabad` — the index prefix is stripped |
+| `era` | `pre2016` (2014-15, 2015-16) or `post2016` (2016-17 onward) — the 2016 boundary break is a data field, not a convention |
+| `crop` | `Cotton (lint)`, `Arhar/Tur`, `Moong (green gram)`, `Rice` |
+| `area_ha`, `area_unit` | planted area, `ha` for every crop |
+| `production`, `production_unit` | `bales` for cotton, `tonnes` for the rest |
+| `yield`, `yield_reported`, `yield_unit` | `bales/ha` for cotton, `t/ha` for the rest |
+
+**What was removed.** The source file is 238 district-seasons × 36 crop groups = 8,568
+long rows in 111 columns. The 32 out-of-scope crop groups (7,628 rows and 96 columns)
+are dropped, along with the constant `State` column, the redundant `Year` column, the
+always-Kharif `session` column, and the 3-level MultiIndex header. A further **12 rows**
+are removed by the quality rules (`area == 0`, `production == 0`, `area < 10 ha`, missing
+value) — for these four crops the only rules that bite are *area below 10 ha* and
+*missing values*: arhar `jayashankar 2022-23`; moong `jogulamba` ×4, `medchal` ×5,
+`mulugu 2022-23`, `peddapalli 2021-22`. Every removed row and its reason is listed in
+`data/processed/crops_kharif_clean.metadata.json`.
+
+**Units are read from the source column labels and never converted.** Cotton is reported
+in bales, the other three crops in tonnes, area is hectares throughout. No bale-to-tonne
+factor is applied: that would be an assumption, not a cited value in this file, and
+cotton is modelled on the bales scale. Cross-crop comparability comes from percentage
+effects, never from a converted scale.
+
+**Precision.** The DES publishes yield rounded to two decimals. `yield_reported` is that
+value as published; `yield` is `production / area_ha` at full precision and is the
+modelling target, because 2 dp is a coarse grid for moong — a 0.01 step on a median of
+0.63 t/ha is 1.6 %, the same order as the effects being measured. A hard gate asserts
+`yield == round(yield_reported, 2)` on every row; it passes on all 940.
+
+## 4. Method
 
 **Season window.** 1 June – 30 September, the official kharif sowing window (Telangana
-District Collectorate). The ingest window is wider (1 June – 31 October) so that
-late-season dry spells and heat are captured in the spell and heat features.
+District Collectorate). The ingest window is wider (1 June – 31 October) so late-season
+dry spells and heat are captured in the spell and heat features.
 
 **Weather features** (per district × season, `src/04_features.py`)
 
@@ -77,6 +116,11 @@ linear-only model, and on the extended panel. All of those results are in
 **ΔR² = R²(Stage 2) − R²(Stage 1)**, with the change in adjusted R² and a partial
 F-test on the added block.
 
+**Window sensitivity.** The same Stage 1 model is refitted on three rainfall windows —
+Jul–Sep, Jun–Sep (base) and Jun–Oct — to test whether the conclusion depends on the
+sowing window (`src/12_window_sensitivity.py`). A gate asserts the base window
+reproduces the shipped Stage 1 fit exactly.
+
 **Validation.** Chronological split only — train ≤ 2019-20 (4 seasons), test ≥ 2020-21
 (3 seasons). Random splits leak across autocorrelated weather years, and none appear in
 the codebase. The baseline is the district-crop median yield computed on the train
@@ -89,16 +133,14 @@ of rows times the number of crops.
 
 **Districts and boundaries.** The DES file is the source of truth for district
 membership. Districts are era-tagged (`{slug}__pre2016` / `{slug}__post2016`) so the
-2016 reorganisation is an explicit break rather than a silent splice. The 2016
-reorganisation is *not* a clean partition — some child districts draw territory from
-two parents — so no parent-district reconstruction is attempted; see
-`data/geo/PARTITION_NOTE.md`.
+2016 reorganisation is an explicit break rather than a silent splice — see
+§8 for what the reorganisation actually is.
 
 **District coordinates.** Area-weighted centroid of the ERA5 0.25° grid cells that fall
 inside each district polygon, for all 32 districts. The method and the boundary file's
 SHA-256 are recorded in `data/manifests/geo.json`.
 
-## 4. Results
+## 5. Results
 
 Primary panel, 2016-17 → 2022-23, district + season fixed effects.
 `b₁` is the linear rainfall term, `b₂` the quadratic term.
@@ -107,10 +149,10 @@ Primary panel, 2016-17 → 2022-23, district + season fixed effects.
 
 | Crop | Unit | n | b₁ (per mm) | p | b₂ | p | R² | Rainfall optimum R\* |
 |---|---|---|---|---|---|---|---|---|
-| Cotton (lint) | bales/ha | 220 | +0.001462 | 0.119 | −4.34×10⁻⁷ | 0.294 | 0.570 | **not supported** — quadratic term n.s. |
-| Arhar / Tur | t/ha | 219 | +0.004608 | 0.090 | −2.23×10⁻⁶ | 0.069 | 0.249 | **not supported** — quadratic term n.s. |
-| Moong (green gram) | t/ha | 209 | +0.000003 | 0.992 | −4.85×10⁻⁸ | 0.695 | 0.545 | **not supported** — quadratic term n.s. |
-| Rice | t/ha | 220 | +0.001466 | 0.005 | −5.41×10⁻⁷ | 0.019 | 0.732 | **1,355 mm** (95% CI 1,019 – 1,690) |
+| Cotton (lint) | bales/ha | 220 | +0.001466 | 0.118 | −4.35×10⁻⁷ | 0.293 | 0.570 | **not supported** — quadratic term n.s. |
+| Arhar / Tur | t/ha | 219 | +0.004614 | 0.090 | −2.23×10⁻⁶ | 0.069 | 0.249 | **not supported** — quadratic term n.s. |
+| Moong (green gram) | t/ha | 209 | −0.000005 | 0.986 | −4.53×10⁻⁸ | 0.714 | 0.545 | **not supported** — quadratic term n.s. |
+| Rice | t/ha | 220 | +0.001474 | 0.005 | −5.44×10⁻⁷ | 0.018 | 0.732 | **1,354 mm** (95% CI 1,021 – 1,688) |
 
 **Read this carefully.** For cotton, arhar and moong there is no statistically
 supported inverted-U: the quadratic term is insignificant in the primary
@@ -122,21 +164,42 @@ For **rice** the quadratic term is significant, but the vertex needs two caveats
 It sits at the **95th percentile** of observed rainfall, and the fitted curve is
 still rising over most of the observed range — the "optimum" is at the wet edge of
 the data, not a local maximum within it. The no-season-FE specification gives **no**
-vertex (p = 0.361), while the extended panel gives 1,350 mm. Per the guide's rule,
+vertex (p = 0.355), while the extended panel gives 1,350 mm. Per the guide's rule,
 the year-FE specification is primary and the divergence is flagged.
 
 A linear-only specification (no quadratic term) is significant for cotton
-(b₁ = +0.000518, p = 0.043) and rice (b₁ = +0.000288, p = 0.044), and not for arhar
-(p = 0.835) or moong (p = 0.156).
+(b₁ = +0.000520, p = 0.042) and rice (b₁ = +0.000289, p = 0.043), and not for arhar
+(p = 0.838) or moong (p = 0.152).
+
+### Season-window sensitivity — the conclusion does not depend on the window
+
+The Jun–Sep window is the *sowing* window, not the growing season, so the model is
+refitted on two alternatives. p is the p-value of the quadratic term; a vertex is
+reported only when the term is negative and significant at p < 0.05.
+
+| Crop | Jul–Sep (92 d) | Jun–Sep (122 d, base) | Jun–Oct (153 d) |
+|---|---|---|---|
+| Cotton (lint) | p = 0.142 · no vertex | p = 0.293 · no vertex | p = 0.315 · no vertex |
+| Arhar / Tur | p = 0.223 · no vertex | p = 0.069 · no vertex | p = 0.406 · no vertex |
+| Moong (green gram) | p = 0.646 · no vertex | p = 0.714 · no vertex | p = 0.386 · no vertex |
+| Rice | p = 0.001 · **R\* = 1,177 mm** | p = 0.018 · **R\* = 1,354 mm** | p = 0.006 · **R\* = 1,411 mm** |
+
+**The conclusion is window-independent.** The same three crops support no inverted-U
+under all three windows, and rice supports one under all three. Rice's vertex does move
+with the window (1,177 → 1,354 → 1,411 mm), which is expected — the vertex is a
+rainfall quantity, so it scales with the rainfall total it is measured against, and
+comparing the three numbers directly is meaningless. What is comparable is the *shape* of
+the finding, and that is stable. The Jun–Sep column reproduces the shipped Stage 1 fit
+exactly, which is a gate in the build.
 
 ### Stage 2 — do dry spells and heat add anything?
 
 | Crop | R² Stage 1 | R² Stage 2 | ΔR² | Δ adjusted R² | partial F p | Verdict |
 |---|---|---|---|---|---|---|
-| Cotton (lint) | 0.570 | 0.600 | **+0.031** | +0.023 | **0.023** | dry-spell/heat features **add** explanatory power beyond cumulative rainfall |
-| Arhar / Tur | 0.249 | 0.269 | +0.020 | −0.001 | 0.449 | cumulative rainfall is sufficient; the increase is not robust |
-| Moong (green gram) | 0.545 | 0.558 | +0.013 | −0.001 | 0.465 | cumulative rainfall is sufficient; the increase is not robust |
-| Rice | 0.732 | 0.738 | +0.007 | −0.001 | 0.488 | cumulative rainfall is sufficient; the increase is not robust |
+| Cotton (lint) | 0.570 | 0.600 | **+0.030** | +0.023 | **0.024** | dry-spell/heat features **add** explanatory power beyond cumulative rainfall |
+| Arhar / Tur | 0.249 | 0.269 | +0.020 | −0.001 | 0.448 | cumulative rainfall is sufficient; the increase is not robust |
+| Moong (green gram) | 0.545 | 0.558 | +0.013 | −0.001 | 0.460 | cumulative rainfall is sufficient; the increase is not robust |
+| Rice | 0.732 | 0.739 | +0.007 | −0.001 | 0.487 | cumulative rainfall is sufficient; the increase is not robust |
 
 This is the test of Bal et al. (2022)'s central claim on open data for Telangana, and
 the answer is **crop-specific**. For cotton the dry-spell and heat block adds
@@ -156,14 +219,14 @@ district-crop median yield computed on the train period only.
 
 | Crop | RMSE model | RMSE baseline | Skill | Skill, no season FE |
 |---|---|---|---|---|
-| Cotton (lint) | 0.787 | 0.561 | **−0.403** | −0.355 |
-| Arhar / Tur | 1.886 | 1.950 | **+0.033** | +0.031 |
+| Cotton (lint) | 0.788 | 0.561 | **−0.405** | −0.354 |
+| Arhar / Tur | 1.885 | 1.949 | **+0.033** | +0.031 |
 | Moong (green gram) | 0.261 | 0.255 | **−0.023** | −0.035 |
-| Rice | 0.502 | 0.452 | **−0.111** | −0.012 |
+| Rice | 0.502 | 0.452 | **−0.111** | −0.010 |
 
 **Weather alone does not predict district-level kharif yield.** For cotton, moong and
 rice the model is *worse* than simply reporting the district's own ten-year median; only
-arhar shows a positive skill, and it is +0.03 — a 3% RMSE reduction, which is not a
+arhar shows a positive skill, and it is +0.03 — a 3 % RMSE reduction, which is not a
 practical forecasting tool.
 
 One caveat on the evaluation, stated plainly: the primary specification differences out
@@ -176,7 +239,7 @@ the same answer for every crop, so the conclusion does not rest on that conventi
 
 ERA5 observed kharif rainfall for 1 Jun – 30 Sep 2026, across the 32 district
 centroids: **state mean 488 mm**, median 439 mm, p10–p90 = 285–731 mm, range 248–816 mm.
-The fitting period's observed range was 374–1,827 mm, so 2026 sits at the **1.6th
+The fitting period's observed range was 374–1,827 mm, so 2026 sits at the **1.4th
 percentile** of the historical distribution and **9 of 32 districts fall below the
 observed minimum**.
 
@@ -184,7 +247,7 @@ The dashboard and F1 therefore draw the 2026 rainfall as a dashed marker on the 
 curve, with its district band, and state that any implied yield is a reading of the
 curve and an extrapolation below the fitted range — not a forecast.
 
-## 5. Figures
+## 6. Figures
 
 | File | What it shows |
 |---|---|
@@ -192,12 +255,16 @@ curve and an extrapolation below the fitted range — not a forecast.
 | `figures/f2_timeseries.png` | Kharif rainfall and cotton yield by season, p10–p90 bands, stacked on a shared x-axis (no dual axis) |
 | `figures/f3_validation.png` | Out-of-sample RMSE against the median baseline, and the skill score |
 | `figures/f4_choropleth.png` | Cotton yield anomaly (%) by district for 2022-23, RdYlBu with zero at the midpoint |
+| `figures/f5_window_sensitivity.png` | The response curve refitted on three season windows |
 
 The interactive explorer is `dashboard/index.html`. It opens straight from disk
 (`file://`), needs no server, and fetches nothing from a CDN: Plotly, Leaflet and the
-fonts are vendored in the repository.
+fonts are vendored in the repository. The map offers three metrics — yield anomaly
+(RdYlBu, the default), absolute yield (Blues), and **rainfall deficit** (YlOrRd: this
+season's rainfall against that district's own 2016-17–2022-23 median, so the map shows
+where a season was dry *for that district* rather than for the state).
 
-## 6. Limitations — all twelve
+## 7. Limitations — all twelve
 
 1. **Reanalysis, not observation.** ERA5 is a model-assimilated reanalysis product at
    0.25° (~25 km) resolution. It is not IMD station gauge data.
@@ -211,7 +278,8 @@ fonts are vendored in the repository.
    Pre- and post-revision periods are modelled as distinct fixed-effect groups, **not**
    as a continuous panel.
 6. **Sowing window ≠ season.** Jun–Sep is the official kharif sowing window; cotton and
-   arhar grow to Nov–Dec, so late-season rainfall is undercounted.
+   arhar grow to Nov–Dec, so late-season rainfall is undercounted. (Tested: the
+   conclusion does not change under Jul–Sep or Jun–Oct — see §5.)
 7. **DES agency discontinuity.** Pre-2014 figures originate with undivided Andhra Pradesh
    DES; post-2014 with Telangana DES. Estimation methodology may differ.
 8. **Cotton is reported in bales**, not tonnes, and is modelled on that scale.
@@ -229,14 +297,17 @@ Beyond the twelve, and specific to this build:
 13. **The delivered DES file covers 2014-15 → 2022-23 only.** The specification assumed
     2000-01 → 2022-23; the file does not contain the earlier seasons. See
     `plan/ERRATA.md` — the file wins, and the panel windows were narrowed accordingly.
-14. **Parent-district reconstruction is blocked.** The 2016 reorganisation is not a clean
-    partition, so no zero-sum parent aggregation was attempted
-    (`data/geo/PARTITION_NOTE.md`).
+14. **No parent-district reconstruction is attempted.** The 2016 division is zero-sum
+    (x → y+z ⟹ x = y+z), but Suryapet was formed from parts of two parents, so those
+    parents cannot be rebuilt from the children the dataset names. Post-2016 districts
+    are used as individual entities with their new names (`data/geo/PARTITION_NOTE.md`).
 15. **The season fixed effects of the test period are unobserved.** Out-of-sample
     predictions use the reference season's effect; the no-season-FE column shows the
     conclusion is unchanged.
+16. **Four crops only.** The source file carries 36 kharif crop groups; the other 32 are
+    outside the project's scope and are not in the delivered dataset.
 
-## 7. Reproduction
+## 8. Reproduction
 
 ```bash
 # 1. environment (Python 3.11+; 3.13 used here)
@@ -248,12 +319,14 @@ uv pip install --python .venv/bin/python \
 export PYTHONHASHSEED=0
 for step in 01_ingest_des 02_build_geo 03_fetch_era5 04_features \
             05_build_panel 06_model_stage1 07_model_stage2 08_validate \
-            09_figures 10_build_dashboard; do
+            09_figures 12_window_sensitivity 12_figure_window \
+            10_build_dashboard; do
     .venv/bin/python "src/${step}.py"
 done
 
-# 3. the dashboard QA harness (headless Chrome; 20 checks)
-bash tests/run_dashboard_qa.sh
+# 3. the checks
+.venv/bin/python tests/verify_readme_numbers.py   # README vs the artefacts
+bash tests/run_dashboard_qa.sh                     # 29 headless checks
 ```
 
 - `src/03_fetch_era5.py` takes an optional window argument: `analysis` (default),
@@ -264,6 +337,8 @@ bash tests/run_dashboard_qa.sh
   present.
 - `src/05_build_panel.py` re-verifies that the panel rebuilds byte-identically
   (SHA-256) and fails if it does not.
+- `src/12_window_sensitivity.py` fails if the base window does not reproduce the
+  shipped Stage 1 fit.
 - The panel, the model summary and every manifest carry their own SHA-256 in
   `data/manifests/`.
 
@@ -272,7 +347,7 @@ gitignored — reproducibility is carried by the manifests and checksums, not by
 committing blobs. The DES input file itself is copied to `data/raw/des/` and
 checksummed there.
 
-## 8. Coordinate source and partition verdict
+## 9. Coordinate source and the 2016 reorganisation
 
 - **Boundaries:** `data/raw/geo/telangana_districts.geojson`, fetched from
   `https://raw.githubusercontent.com/gpavanb1/Telangana-Visualisation/master/data/Telangana.geojson`,
@@ -284,24 +359,32 @@ checksummed there.
   `Mahabubnagar`); all 32 districts join.
 - **Coordinates:** area-weighted centroid of the intersecting ERA5 0.25° grid cells, for
   all 32 districts (`data/geo/districts.csv`).
-- **Partition verdict:** **Tier 2 blocked.** The 2016 reorganisation is not a clean
-  partition — a child district drawing from two parents admits no exact zero-sum
-  partition — and the delivered file contains no pre-2016 parent-level data to
-  reconstruct from. Tier 1 proceeds with era-tagged district ids. Full reasoning and
-  sources: `data/geo/PARTITION_NOTE.md`.
+- **The 2016 reorganisation is zero-sum.** When an undivided district *x* was divided
+  into *y* and *z* in 2016, *x = y + z* — the land does not leave the parent. The
+  children take the parent's name or a new one (Ranga Reddy → Rangareddy; Warangal →
+  Warangal Rural + Warangal Urban), and the dataset reports them individually from
+  2016-17 onward. A parent-level figure for a post-2016 season would be
+  `sum(production_children) / sum(area_children)`. **That reconstruction is not
+  attempted**: Suryapet was formed from parts of two parents (Khammam and Nalgonda),
+  so those parents cannot be rebuilt from the children the dataset names, and it is
+  unnecessary — era-tagged fixed effects keep pre- and post-2016 districts apart, so
+  no undivided district is ever compared to a post-2016 one as if it were the same
+  unit. An area-based check of the zero-sum property was inconclusive (residuals
+  +65 % to −70 %, swamped by crop choice), so the zero-sum status is a fact of the
+  reorganisation, not a measurement. Full reasoning: `data/geo/PARTITION_NOTE.md`.
 
-## 9. Repository map
+## 10. Repository map
 
 ```
 data/raw/          immutable source responses (gitignored, checksummed)
 data/interim/      long-format DES, daily weather, features (gitignored)
-data/processed/    panel_v1.0.0.parquet, model_summary.json (gitignored)
+data/processed/    crops_kharif_clean, panel, model summary (gitignored)
 data/geo/          districts.csv, districts.geojson, name_crosswalk.csv, PARTITION_NOTE.md
 data/manifests/    fetch_manifest.json, checksums.sha256, per-stage manifests
-src/01..10         the pipeline, one script per stage
-figures/           F1–F4 static PNGs
+src/01..12         the pipeline, one script per stage
+figures/           F1–F5 static PNGs
 dashboard/         the static interactive site
-tests/             headless QA harness for the dashboard
+tests/             artefact verification and the headless dashboard QA
 plan/              SRS.md, GUIDE.md, ERRATA.md
 ```
 
