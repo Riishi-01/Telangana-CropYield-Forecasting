@@ -443,11 +443,10 @@ def main() -> None:
     # the report's headline and the section headings
     check("the report headline is the forecast, not a reading",
           "**Forecasting kharif yield from rainfall.**" in readme, "")
-    check("the model-comparison heading is the report's language",
-          "### Does the weather model earn its place?" in readme, "")
-    check("the dashboard uses the same heading",
-          "Does the weather model earn its place?"
-          in (cfg.DASHBOARD / "index.html").read_text(), "")
+    check("the validation section is retitled",
+          "### Can rainfall predict a district's kharif yield?" in readme, "")
+    check("the retired heading is gone from the report",
+          "Does the weather model earn its place?" not in readme, "")
 
     # ---- C11 the retired sections ------------------------------------------
     index_html = (cfg.DASHBOARD / "index.html").read_text()
@@ -550,6 +549,40 @@ def main() -> None:
           "2026-27 (prediction)" in app_js
           and "2026-27 · prediction" in app_js
           and "(prediction)" in app_js, "")
+
+    # ---- C14 the two retired page sections, and the new masthead -----------
+    check("the model-comparison section is retired from the page",
+          "Does the weather model earn its place?" not in index_html
+          and "renderStats" not in app_js
+          and "els.stats" not in app_js
+          and "region--stats" not in styles, "")
+    check("the window-sensitivity section is retired from the page",
+          "Does the rainfall optimum depend on the season window?" not in index_html
+          and "renderWindowPanel" not in app_js
+          and "region--window" not in styles
+          and ".window-table" not in styles, "")
+    check("the bundle no longer ships the window panel",
+          "window_sensitivity" not in bundle if bundle_path.exists() else True, "")
+    check("the headline is one line",
+          "Forecasting kharif yield from rainfall and 2026 prediction" in index_html, "")
+    check("the standfirst names the scope, the crops, the source and the model",
+          "32 districts" in index_html
+          and "Kharif 2014-15" in index_html
+          and "Cotton (lint), arhar/tur, moong (green gram), rice" in index_html
+          and "Open-Meteo archive API" in index_html
+          and "ordinary least squares" in index_html, "")
+    check("the yield-per-year chart is named",
+          "Yield per year, and the 2026 prediction" in index_html, "")
+    cfg_block = app_js[app_js.index("var PLOT_CONFIG"):
+                       app_js.index("};", app_js.index("var PLOT_CONFIG"))]
+    check("the hover label is styled in the LAYOUT, not the config",
+          "hoverlabel: HOVER_LABEL" in app_js
+          and "var HOVER_LABEL = {" in app_js
+          and "hoverlabel" not in cfg_block, "")
+    check("the model readout reads out the forecasting model on the 2026 layer",
+          "forecastFacts" in app_js
+          and "2026 model" in app_js
+          and "Skill vs district median" in app_js, "")
 
     # ---- the disclosure set: the bundle and the report must agree -----------
     if bundle_path.exists():

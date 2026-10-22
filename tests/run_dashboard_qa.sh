@@ -48,7 +48,13 @@ if "error" in r:
     sys.exit(1)
 
 checks = [
-    ("model facts rendered", "Rainfall optimum" in r.get("defaultFacts", "")),
+    ("the model readout renders", len(r.get("defaultFacts", "")) > 40),
+    ("the 2026 layer reads out the forecasting model",
+     "2026 model" in r.get("forecastFacts", "")
+     and "C(district_id)" in r.get("forecastFacts", "")
+     and "Skill vs district median" in r.get("forecastFacts", "")),
+    ("an observed season reads out the shared fit",
+     "Rainfall optimum" in r.get("observedFacts", "")),
     ("rice reports a supported optimum R*", re.search(r"R\*\s*[0-9,]+\s*mm", r.get("riceFacts", "")) is not None),
     ("unmodelled crop is not given a model",
      "none for this crop" in r.get("wheatFacts", "")),
@@ -63,12 +69,23 @@ checks = [
      and "drought severity" in r.get("legendCaptionDeficit", "").lower()),
     ("leaflet drew the district polygons", r.get("leafletPaths", 0) >= 33),
     ("every district carries a value label", r.get("mapLabels") == 33),
-    ("model comparison chart rendered", r.get("statsBars") == 8),
-    ("window-sensitivity panel rendered",
-     r.get("windowHeadCells") == 4 and r.get("windowBodyRows") == 4),
-    ("window panel reports the p-value and the vertex",
-     "p =" in r.get("windowFirstRow", "")
-     and ("no vertex" in r.get("windowFirstRow", "") or "R*" in r.get("windowFirstRow", ""))),
+    ("the window-sensitivity section is retired",
+     r.get("windowSectionPresent") is False and r.get("windowTablePresent") is False),
+    ("the model-comparison section is retired",
+     r.get("statsSectionPresent") is False and r.get("statsChartPresent") is False),
+    ("the headline is one line",
+     r.get("titleOneLine") is True
+     and r.get("titleText") == "Forecasting kharif yield from rainfall and 2026 prediction"),
+    ("the standfirst names the scope, the crops, the source and the model",
+     "32 districts" in r.get("standfirst", "")
+     and "Kharif 2014-15" in r.get("standfirst", "")
+     and "Cotton (lint)" in r.get("standfirst", "")
+     and "Open-Meteo" in r.get("standfirst", "")
+     and "ordinary least squares" in r.get("standfirst", "")),
+    ("the hover label is styled in the layout",
+     r.get("hoverLabel", {}).get("bgcolor") == "#fffdf9"
+     and "IBM Plex Sans" in (r.get("hoverLabel", {}).get("family") or "")
+     and r.get("hoverLabel", {}).get("color") == "#16181d"),
      ("crop selector offers only the four project crops",
       r.get("cropOptions") == 4),
      ("crop identity strip shows all four crops",
@@ -155,6 +172,8 @@ checks = [
      ("the 2026 disclaimer box is retired", r.get("disclaimerBoxPresent") is False),
      ("the forecast section is renamed",
       r.get("forecastTableHead") == "2026 yield forecast Analysis"),
+    ("the yield-per-year chart is named",
+      r.get("forecastHead") == "Yield per year, and the 2026 prediction"),
      ("the state summary is tinted both ways",
       r.get("summaryDeltasDown") > 0 and r.get("summaryDeltasUp") > 0),
      ("every state summary change carries its sign",

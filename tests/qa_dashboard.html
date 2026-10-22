@@ -83,6 +83,12 @@ function run(d, w) {
   results.summaryDeltas = d.querySelectorAll("#stateSummary .state-summary__delta").length;
   results.summaryNote = txt(d.getElementById("stateSummaryNote"));
 
+  // the model readout: on the 2026 layer it describes the model that
+  // produced the prediction, on an observed season the shared Stage-1 fit
+  results.forecastFacts = txt(d.getElementById("modelFacts"));
+  setSelect("seasonSelect", "2018-19");
+  results.observedFacts = txt(d.getElementById("modelFacts"));
+
   // the crop selector and the model facts follow the selected crop
   setSelect("cropSelect", "Rice");
   results.riceFacts = txt(d.getElementById("modelFacts"));
@@ -91,7 +97,6 @@ function run(d, w) {
   results.wheatFacts = txt(d.getElementById("modelFacts"));
 
   setSelect("cropSelect", "Cotton(lint)");
-  setSelect("seasonSelect", "2018-19");
   results.mapNote = txt(d.getElementById("mapNote"));
 
   // the map metric drives the legend
@@ -104,14 +109,28 @@ function run(d, w) {
 
   results.leafletPaths = d.querySelectorAll("#map path").length;
   results.mapLabels = d.querySelectorAll("#map .district-label").length;
-  results.statsPlot = d.querySelectorAll("#statsChart svg").length;
-  results.statsBars = d.querySelectorAll("#statsChart .barlayer path").length;
+  // the retired sections must be gone (ERRATA C14)
+  results.windowSectionPresent = !!d.getElementById("windowHead");
+  results.windowTablePresent = !!d.getElementById("windowTable");
+  results.statsSectionPresent = !!d.getElementById("statsHead");
+  results.statsChartPresent = !!d.getElementById("statsChart");
 
-  // the window-sensitivity panel
-  results.windowHeadCells = d.querySelectorAll("#windowTable thead th").length;
-  results.windowBodyRows = d.querySelectorAll("#windowTable tbody tr").length;
-  results.windowFoot = txt(d.getElementById("windowFoot"));
-  results.windowFirstRow = txt(d.querySelector("#windowTable tbody tr"));
+  // the masthead: the headline is one line, and the fact block names the
+  // scope of the analysis
+  var h1 = d.querySelector(".masthead h1");
+  results.titleText = txt(h1);
+  results.titleOneLine = !!h1 && h1.scrollWidth <= h1.clientWidth + 1;
+  results.standfirst = txt(d.querySelector(".standfirst"));
+
+  // the hover label is styled in the LAYOUT, so the text can never be drawn
+  // outside its own box (the invisible-text bug)
+  var fc = d.getElementById("forecastChart");
+  results.hoverLabel = fc && fc.layout && fc.layout.hoverlabel ? {
+    bgcolor: fc.layout.hoverlabel.bgcolor,
+    family: fc.layout.hoverlabel.font && fc.layout.hoverlabel.font.family,
+    color: fc.layout.hoverlabel.font && fc.layout.hoverlabel.font.color
+  } : null;
+
   results.cropOptions = d.getElementById("cropSelect").options.length;
   results.cropOptionTexts = Array.prototype.map.call(
     d.getElementById("cropSelect").options, function (o) { return o.textContent.trim(); }
@@ -220,6 +239,7 @@ function run(d, w) {
   results.colophonPresent = !!d.querySelector("footer.colophon");
   results.disclaimerBoxPresent = !!d.getElementById("markerDisclaimer");
   results.forecastTableHead = txt(d.getElementById("forecastTableHead"));
+  results.forecastHead = txt(d.getElementById("forecastHead"));
   results.summaryDeltasDown = d.querySelectorAll(
     "#stateSummary .diff-cell--down"
   ).length;
