@@ -744,7 +744,7 @@ main {
 
 .state-summary__table {
   width: 100%;
-  max-width: 60rem;
+  max-width: 46rem;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
@@ -806,100 +806,6 @@ main {
   max-width: 78ch;
 }
 
-/* the 2026 forecast table */
-#forecastTable th {
-  text-align: left;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-rule-strong);
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
-}
-
-#forecastTable th.num,
-#forecastTable td.num { text-align: right; }
-
-#forecastTable th[aria-sort="ascending"]::after { content: " ▲"; }
-#forecastTable th[aria-sort="descending"]::after { content: " ▼"; }
-
-#forecastTable td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-rule);
-  font-variant-numeric: tabular-nums;
-}
-
-#forecastTable td.num { font-family: var(--font-mono); font-size: var(--text-xs); }
-
-#forecastTable tbody tr { cursor: pointer; }
-#forecastTable tbody tr:hover { background: var(--color-accent-soft); }
-#forecastTable tbody tr:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-}
-
-#forecastTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-/* =============================================================================
-   colophon
-   ============================================================================= */
-.colophon {
-  max-width: var(--page-max);
-  margin: var(--space-16) auto var(--space-10);
-  padding: var(--space-8) var(--space-6) 0;
-  border-top: 1px solid var(--color-rule-strong);
-}
-
-.colophon h2 {
-  font-family: var(--font-display);
-  font-size: var(--text-h2);
-  margin-bottom: var(--space-5);
-}
-
-.disclosures {
-  margin: 0;
-  padding-left: 0;
-  list-style: none;
-  counter-reset: disc;
-  max-width: 96ch;
-}
-
-.disclosures li {
-  counter-increment: disc;
-  display: grid;
-  grid-template-columns: 2.5rem 1fr;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--color-rule);
-  font-size: var(--text-sm);
-  color: var(--color-ink-soft);
-}
-
-.disclosures li::before {
-  content: counter(disc) ".";
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
-  padding-top: 0.15rem;
-}
-
-.colophon__meta {
-  margin-top: var(--space-8);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-rule);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
-}
-
 /* =============================================================================
    responsive
    ============================================================================= */
@@ -931,7 +837,6 @@ main {
 @media (max-width: 620px) {
   .masthead { padding: var(--space-6) var(--space-4) var(--space-4); }
   main { padding: 0 var(--space-4); }
-  .colophon { padding: var(--space-6) var(--space-4) 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

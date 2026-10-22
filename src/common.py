@@ -173,11 +173,12 @@ CROP_COLORS = {
 
 # Mandatory disclosure strings (SRS §5.6, §9)
 DISCLOSURE_2026 = (
-    "2026 is a model prediction, not an observation and not a validated forecast. "
-    "Each crop is forecast by its own specification, selected by leave-one-season-out "
-    "cross-validation inside the fitting period, and the out-of-sample skill of that "
-    "specification is printed beside every prediction. The extrapolation gap is four "
-    "seasons, and the 2026 rainfall sits below the fitted range."
+    "2026 is a model prediction, not a validated forecast. Each crop is forecast by "
+    "its own specification, selected by leave-one-season-out cross-validation inside "
+    "the fitting period. Two of the four models do not beat a district-median "
+    "baseline, so their predictions mean no evidence of a change. No prediction "
+    "interval is claimed: with three held-out seasons there is not enough data to "
+    "calibrate one."
 )
 DISCLOSURE_2026_FORECAST = (
     "2026 is a model prediction. The 2026 figures come from each crop's own "

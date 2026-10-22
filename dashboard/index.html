@@ -123,7 +123,6 @@
          aria-label="Line chart of the state yield per hectare for each crop by season, indexed to the Telangana average, with the 2026 prediction drawn as a dashed segment ending in a diamond."></div>
 
     <p class="forecast-legend" id="forecastLegend"></p>
-    <p class="disclaimer" id="markerDisclaimer" hidden></p>
     <p class="chart-foot" id="forecastFoot">—</p>
 
     <div class="forecast-detail" id="forecastDetail" aria-live="polite">
@@ -154,10 +153,11 @@
   <!-- ── 2026 forecast table ───────────────────────────────────────────── -->
   <section class="region region--forecasttable" aria-labelledby="forecastTableHead">
     <div class="section-head">
-      <h2 id="forecastTableHead">Districts <span class="section-note section-note--inline" id="forecastTableSubtitle">—</span></h2>
-      <p class="section-note">The 2026 prediction for every district, against the
-        state-wide mean yield per hectare for the crop selected at the top of the page.
-        Sortable; the difference is tinted and always carries its sign.</p>
+      <h2 id="forecastTableHead">2026 yield forecast Analysis</h2>
+      <p class="section-note">The state totals the 2026 forecast implies for each crop,
+        against the Telangana average. Every figure is a model prediction; the state
+        average is computed on the same area basis, so the two columns differ only by
+        the model's skill.</p>
     </div>
 
     <div class="state-summary">
@@ -169,8 +169,6 @@
             <th scope="col">Crop</th>
             <th scope="col" class="num">2026</th>
             <th scope="col" class="num">State avg</th>
-            <th scope="col" class="num">Kharif rainfall 2026</th>
-            <th scope="col" class="num">Kharif rainfall avg</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -178,21 +176,6 @@
       <p class="state-summary__note" id="stateSummaryNote">—</p>
     </div>
 
-    <div class="table-wrap">
-      <table id="forecastTable">
-        <thead>
-          <tr>
-            <th scope="col" data-sort="label">District</th>
-            <th scope="col" data-sort="pred" class="num">2026 predicted</th>
-            <th scope="col" data-sort="state" class="num">State mean</th>
-            <th scope="col" data-sort="diff" class="num">Difference</th>
-            <th scope="col" data-sort="rain" class="num">2026 rainfall (mm)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="chart-foot" id="forecastTableFoot">—</p>
   </section>
 
   <!-- ── model comparison ────────────────────────────────────────────── -->
@@ -206,12 +189,6 @@
     <p class="chart-foot" id="statsFoot">—</p>
   </section>
 </main>
-
-<footer class="colophon">
-  <h2>What this is not</h2>
-  <ol class="disclosures" id="disclosureList"></ol>
-  <p class="colophon__meta" id="colophonMeta">—</p>
-</footer>
 
 <script src="assets/vendor/plotly.min.js"></script>
 <script src="assets/vendor/leaflet.js"></script>

@@ -105,40 +105,6 @@ def main() -> None:
         ref_yield_area = float(d["production"].sum() / d["area_ha"].sum())
         ref_mean_area = float(d["area_ha"].sum() / d["season"].nunique())
 
-        # The kharif rainfall over THIS crop's own area.  The state mean is
-        # the same for every crop, so it would say nothing beside a crop;
-        # each crop is grown on a different area, and the rainfall over that
-        # area differs, so this is the figure that belongs in the row.
-        #
-        # 2026: the 2022-23 area of the crop, weighted by the observed 2026
-        # rainfall - the same area baseline the yield columns use.
-        # Average: the mean over the nine observed seasons of the crop's
-        # area-weighted seasonal rainfall.
-        rain_2026_by_slug = dict(
-            zip(marker["district_slug"], marker["rain_mm"].astype(float))
-        )
-        num = sum(
-            float(a) * rain_2026_by_slug[sl]
-            for sl, a in base_area.items()
-            if sl in rain_2026_by_slug
-        )
-        den = float(
-            sum(float(a) for sl, a in base_area.items() if sl in rain_2026_by_slug)
-        )
-        rain_2026 = num / den if den else None
-        # the full record, not the primary panel: the state row's average
-        # covers 2014-15 to 2022-23, and the two must be comparable
-        d_all = panel[panel["crop"] == crop]
-        seasonal_rain = []
-        for _, sub in d_all.groupby("season"):
-            w = sub["area_ha"].sum()
-            if w:
-                seasonal_rain.append(float((sub["rain_mm"] * sub["area_ha"]).sum() / w))
-        rain_avg = float(sum(seasonal_rain) / len(seasonal_rain)) if seasonal_rain else None
-        rain_pct = (
-            100.0 * (rain_2026 / rain_avg - 1.0) if rain_2026 and rain_avg else None
-        )
-
         rows = []
         for r in marker.itertuples():
             slug = r.district_slug
@@ -219,25 +185,9 @@ def main() -> None:
                 ),
                 "reference_mean_annual_area_ha": _round(ref_mean_area, 0),
             },
-            "rain": {
-                "mm_2026": _round(rain_2026, 1),
-                "mm_average": _round(rain_avg, 1),
-                "pct_vs_average": _round(rain_pct, 1),
-                "basis": (
-                    "area-weighted over the crop's own area: the 2022-23 kharif "
-                    "area of the crop, weighted by the observed 2026 rainfall; "
-                    "the average is the mean over 2014-15 to 2022-23 of the "
-                    "crop's area-weighted seasonal rainfall"
-                ),
-            },
             "n_negative_predicted": sum(1 for x in rows if x["predicted_2026"] <= 0),
         }
         st = out[crop]["state"]
-        rn = out[crop]["rain"]
-        log(
-            f"  {crop:20s} rain over its own area: {rn['mm_2026']:.0f} mm vs "
-            f"{rn['mm_average']:.0f} mm ({rn['pct_vs_average']:+.1f}%)"
-        )
         log(
             f"  {crop:20s} 2026 {st['yield_2026_per_ha']:.3f} {spec_info['unit']} vs "
             f"avg {st['reference_yield_per_ha']:.3f} -> {st['diff_per_ha']:+.3f} "

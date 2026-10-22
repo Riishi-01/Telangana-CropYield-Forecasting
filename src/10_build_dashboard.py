@@ -223,7 +223,6 @@ def main() -> None:
                 "rejected_specs": res["rejected_specs"],
                 "per_district": res["per_district"],
                 "state": res["state"],
-                "rain": res.get("rain", {}),
                 "n_districts": res["n_districts"],
                 "n_negative_predicted": res["n_negative_predicted"],
             }
@@ -357,8 +356,10 @@ def main() -> None:
                 "Absolute rainfall totals may be biased low."
             ),
             "confound": (
-                "No irrigation, soil or input data. Reported effects are rainfall's marginal "
-                "association conditional on all other factors being average, not a causal yield model."
+                "No irrigation, soil, or input data. This is the dominant confound, and "
+                "the primary limitation of the whole analysis. Reported effects are "
+                "rainfall's marginal association conditional on all other factors being "
+                "average, not a causal yield model."
             ),
             "aggregates": "District aggregates, not farm-level.",
             "boundary": (
@@ -377,16 +378,17 @@ def main() -> None:
             ),
             "cotton": "Cotton is reported in bales, not tonnes, and is modelled on that scale.",
             "sample": (
-                "Small sample per crop: ~220 district-year observations per crop in the primary panel."
+                "Small sample per crop. ~220 district-year observations per crop in the "
+                "primary panel."
             ),
             "not_forecast": cfg.DISCLOSURE_2026,
             "forecast_method": (
-                "2026 is a model prediction, not an observation and not a validated forecast. "
-                "Each crop is forecast by its own specification, selected by leave-one-season-out "
-                "cross-validation inside the fitting period, and each chart carries that model's "
-                "out-of-sample skill score against a district-median baseline. Two of the four "
-                "models do not beat that baseline, so their predictions should be read as "
-                "'no evidence of a change', not as a forecast."
+                "2026 is a model prediction, not a validated forecast. Each crop is forecast "
+                "by its own specification, selected by leave-one-season-out cross-validation "
+                "inside the fitting period, and each chart carries that model's "
+                "out-of-sample skill score against a district-median baseline. Two of the "
+                "four models do not beat that baseline, so their predictions should be read "
+                "as 'no evidence of a change', not as a forecast."
             ),
             "forecast_area": (
                 "2026 planted area does not exist and cannot be forecast. The state-level 2026 "
@@ -396,9 +398,9 @@ def main() -> None:
                 "the measure; production totals are the same forecast rescaled by area."
             ),
             "forecast_specimens": (
-                "The 2026 predictions are per-district point estimates read off a fitted curve. "
-                "No prediction interval is claimed for them: with three held-out seasons there is "
-                "not enough data to calibrate one honestly."
+                "No prediction interval is claimed. With three held-out seasons there is not "
+                "enough data to calibrate one honestly, and a false interval would be worse "
+                "than none."
             ),
             "attribution": (
                 "Attribution. ERA5 via Open-Meteo — CC BY 4.0. DES — Govt. of India open data. "

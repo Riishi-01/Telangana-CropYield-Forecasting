@@ -95,7 +95,6 @@
     pinned: null,
     // the crops ticked in the forecast chart; null means "all of them"
     forecastCrops: null,
-    forecastSort: { key: "diff", dir: 1 },
     forecastPoint: null
   };
 
@@ -116,7 +115,6 @@
     rainTitle: document.getElementById("rainTitle"),
     yieldTitle: document.getElementById("yieldTitle"),
     modelFacts: document.getElementById("modelFacts"),
-    markerDisclaimer: document.getElementById("markerDisclaimer"),
     stats: document.getElementById("statsChart"),
     statsFoot: document.getElementById("statsFoot"),
     forecastChart: document.getElementById("forecastChart"),
@@ -129,11 +127,6 @@
     forecastDetailBody: document.getElementById("forecastDetailBody"),
     stateSummaryBody: document.querySelector("#stateSummary tbody"),
     stateSummaryNote: document.getElementById("stateSummaryNote"),
-    forecastTableBody: document.querySelector("#forecastTable tbody"),
-    forecastTableSubtitle: document.getElementById("forecastTableSubtitle"),
-    forecastTableFoot: document.getElementById("forecastTableFoot"),
-    disclosures: document.getElementById("disclosureList"),
-    colophon: document.getElementById("colophonMeta"),
     dataVersion: document.getElementById("dataVersion")
   };
 
@@ -1136,7 +1129,6 @@
     renderForecastLegend();
     renderForecastFoot();
     renderStateSummary();
-    renderForecastTable();
   }
 
   function drawForecastChart() {
@@ -1487,27 +1479,12 @@
       var unitLabel = isBales ? "M bales" : "M t";
       var pct = st.pct_vs_reference;
       var cls = pct < 0 ? "diff-cell--down" : (pct > 0 ? "diff-cell--up" : "diff-cell--flat");
-      // the rainfall over THIS crop's own area, which is not the state
-      // figure: each crop is grown on a different area
-      var rn = f.rain || {};
-      var rpct = rn.pct_vs_average;
-      var rcls = rpct === null || rpct === undefined
-        ? "diff-cell--flat"
-        : (rpct < 0 ? "diff-cell--down" : "diff-cell--up");
       return {
         label: cropTitle(crop),
         value: millions(st.total_2026) + " " + unitLabel,
         avg: millions(st.reference_total_same_area) + " " + unitLabel,
         delta: (pct > 0 ? "\u2191" : pct < 0 ? "\u2193" : "") + Math.abs(pct).toFixed(1) + "%",
-        cls: cls,
-        rain2026: rn.mm_2026 === undefined || rn.mm_2026 === null
-          ? "\u2014" : fmt(rn.mm_2026, 0) + " mm",
-        rainavg: rn.mm_average === undefined || rn.mm_average === null
-          ? "\u2014" : fmt(rn.mm_average, 0) + " mm",
-        rainDelta: rpct === null || rpct === undefined
-          ? ""
-          : (rpct > 0 ? "\u2191" : "\u2193") + Math.abs(rpct).toFixed(1) + "%",
-        rainCls: rcls
+        cls: cls
       };
     });
 
@@ -1515,33 +1492,20 @@
     // average over the nine observed seasons
     var rs = D.rain_state || null;
     var mk = D.marker || null;
-    var base = null;
-    var now = null;
     if (rs && mk && mk.available) {
-      base = rs.avg_9season;
-      now = mk.state_mean;
+      var base = rs.avg_9season;
+      var now = mk.state_mean;
       var pctR = 100.0 * (now / base - 1.0);
       rows.push({
-        label: "Kharif rainfall (state)",
+        label: "Kharif rainfall",
         value: fmt(now, 0) + " mm",
         avg: fmt(base, 0) + " mm",
         delta: (pctR > 0 ? "\u2191" : "\u2193") + Math.abs(pctR).toFixed(1) + "%",
-        cls: pctR < 0 ? "diff-cell--down" : "diff-cell--up",
-        rain2026: undefined,
-        rainavg: undefined
+        cls: pctR < 0 ? "diff-cell--down" : "diff-cell--up"
       });
     }
 
     body.innerHTML = rows.map(function (r) {
-      var rainCells = r.rain2026 === undefined
-        ? "<td class='num'>\u2014</td><td class='num'>\u2014</td>"
-        : "<td class='num'>" + esc(r.rain2026) +
-            (r.rainDelta
-              ? "<span class='state-summary__delta " + r.rainCls + "'>" +
-                esc(r.rainDelta) + "</span>"
-              : "") +
-          "</td>" +
-          "<td class='num'>" + esc(r.rainavg) + "</td>";
       return (
         "<tr>" +
           "<th scope='row' class='state-summary__crop'>" + esc(r.label) + "</th>" +
@@ -1549,7 +1513,6 @@
             "<span class='state-summary__delta " + r.cls + "'>" + esc(r.delta) + "</span>" +
           "</td>" +
           "<td class='num'>" + esc(r.avg) + "</td>" +
-          rainCells +
         "</tr>"
       );
     }).join("");
@@ -1558,128 +1521,9 @@
       "Totals are for the whole state: the 2026 prediction is the area-weighted " +
       "yield per hectare applied to each district's 2022-23 kharif area, and the " +
       "average is the Telangana average on that same area, so the two columns " +
-      "differ only by the model's skill. The rainfall columns are the kharif " +
-      "rainfall over that crop's OWN area — each crop is grown on a different " +
-      "area, so the state figure would say nothing beside a crop — with the " +
-      "average taken over 2014-15 to 2022-23. The last row is the state-wide " +
-      "figure: " + fmt(now, 0) + " mm against a nine-season state mean of " +
-      fmt(rs ? rs.avg_9season : 0, 0) + " mm, the driest kharif season in the " +
-      "record.";
-  }
-
-  function renderForecastTable() {
-    var crop = state.crop;
-    var f = (D.forecast || {})[crop];
-    if (!f) {
-      els.forecastTableBody.innerHTML = "";
-      els.forecastTableSubtitle.textContent = "—";
-      return;
-    }
-    var unit = f.unit;
-    var rows = f.per_district.map(function (r) {
-      return {
-        label: r.label,
-        slug: r.slug,
-        pred: r.predicted_2026,
-        state: f.state.reference_yield_per_ha,
-        diff: r.pct_vs_state,
-        rain: r.rain_2026_mm
-      };
-    });
-
-    var key = state.forecastSort.key;
-    var dir = state.forecastSort.dir;
-    rows.sort(function (a, b) {
-      var x = a[key], y = b[key];
-      if (typeof x === "string") return x.localeCompare(y) * dir;
-      if (x === null || x === undefined) return 1;
-      if (y === null || y === undefined) return -1;
-      return ((x || 0) - (y || 0)) * dir;
-    });
-
-    var cols = [
-      { key: "label", title: "District" },
-      { key: "pred", title: "2026 predicted", num: true },
-      { key: "state", title: "State mean", num: true },
-      { key: "diff", title: "Difference", num: true },
-      { key: "rain", title: "2026 rainfall (mm)", num: true }
-    ];
-    var head = document.querySelector("#forecastTable thead tr");
-    head.innerHTML = cols.map(function (c) {
-      var aria = state.forecastSort.key === c.key
-        ? ' aria-sort="' + (dir === 1 ? "ascending" : "descending") + '"' : "";
-      return "<th scope='col' data-sort='" + c.key + "'" + aria +
-        (c.num ? " class='num'" : "") + ">" + esc(c.title) + "</th>";
-    }).join("");
-
-    els.forecastTableBody.innerHTML = rows.map(function (r) {
-      var diff = r.diff;
-      var cls = "diff-cell";
-      if (diff === null || diff === undefined) cls += " diff-cell--flat";
-      else if (diff < 0) cls += " diff-cell--down";
-      else if (diff > 0) cls += " diff-cell--up";
-      else cls += " diff-cell--flat";
-      var diffTxt = (diff === null || diff === undefined)
-        ? "—"
-        : (diff > 0 ? "+" : "") + diff.toFixed(1) + "%";
-      return (
-        "<tr data-slug='" + r.slug + "' tabindex='0'>" +
-          "<td>" + esc(r.label) + "</td>" +
-          "<td class='num'>" + fmt(r.pred, 2) + "</td>" +
-          "<td class='num'>" + fmt(r.state, 2) + "</td>" +
-          "<td class='num " + cls + "'>" + diffTxt + "</td>" +
-          "<td class='num'>" + fmt(r.rain, 0) + "</td>" +
-        "</tr>"
-      );
-    }).join("");
-
-    Array.prototype.forEach.call(
-      els.forecastTableBody.querySelectorAll("tr[data-slug]"),
-      function (tr) {
-        tr.addEventListener("click", function () {
-          showForecastPoint(state.crop, tr.getAttribute("data-slug"));
-        });
-      }
-    );
-    Array.prototype.forEach.call(
-      head.querySelectorAll("th[data-sort]"),
-      function (th) {
-        th.addEventListener("click", function () {
-          var k = th.getAttribute("data-sort");
-          if (state.forecastSort.key === k) {
-            state.forecastSort.dir = -state.forecastSort.dir;
-          } else {
-            state.forecastSort.key = k;
-            state.forecastSort.dir = 1;
-          }
-          renderForecastTable();
-        });
-      }
-    );
-
-    els.forecastTableSubtitle.textContent =
-      "2026-27 · " + rows.length + " districts · " + unit;
-
-    // the Mulugu footnote: a delivered data value that is retained as-is and
-    // is visible in the table, so the reader can see why
-    var mulugu = f.per_district.filter(function (r) {
-      return r.slug === "mulugu" && unit === "t/ha";
-    })[0];
-    var extra = "";
-    if (mulugu && mulugu.pct_vs_state !== null && mulugu.pct_vs_state > 200) {
-      extra =
-        " Mulugu's arhar record includes a 2019-20 cell reading 891 t on 39 ha " +
-        "(22.85 t/ha against the district's 0.62–0.91 in other years). It is " +
-        "retained exactly as delivered, and it inflates Mulugu's own mean and " +
-        "therefore its 2026 prediction.";
-    }
-    els.forecastTableFoot.textContent =
-      "Each district's predicted 2026 yield/area against the state-wide mean " +
-      "yield/area for " + cropTitle(crop) + " — the area-weighted state figure " +
-      "(sum of production ÷ sum of area over 2016-17 – 2022-23), not the " +
-      "unweighted mean of district yields. Vermillion is below the state mean, " +
-      "bluish-green is above, and the sign is always printed, so the colour is " +
-      "never the only channel." + extra;
+      "differ only by the model's skill. Rainfall is the state mean; the average " +
+      "is the mean of the nine seasonal state means, 2014-15 to 2022-23 (" +
+      fmt(rs ? rs.avg_9season : 0, 0) + " mm).";
   }
 
   /* ---------------------------------------------------------------------- *
@@ -1896,25 +1740,6 @@
       (state.metric === "anomaly" ? "yield anomaly (%)"
        : state.metric === "deficit" ? "rainfall deficit (%)"
        : "absolute yield (" + unitOf(state.crop) + ")");
-
-    if (D.marker && D.marker.available) {
-      els.markerDisclaimer.hidden = false;
-      var extra = "";
-      if (D.marker.districts_below_historical_min) {
-        extra =
-          " In this build the 2026 state-mean kharif rainfall is " +
-          fmt(D.marker.state_mean, 0) + " mm, the " +
-          fmt(D.marker.percentile_in_history, 1) + "th percentile of the " +
-          fmt(D.marker.historical_min, 0) + "–" + fmt(D.marker.historical_max, 0) +
-          " mm range observed in the fitting period; " +
-          D.marker.districts_below_historical_min + " of " + D.marker.n_districts +
-          " districts sit below that observed minimum, so the prediction is an " +
-          "extrapolation below the fitted range, not an interpolation.";
-      }
-      els.markerDisclaimer.textContent = META.disclosures.not_forecast + extra;
-    } else {
-      els.markerDisclaimer.hidden = true;
-    }
   }
 
   /* ---------------------------------------------------------------------- *
@@ -1949,26 +1774,8 @@
     els.dataVersion.textContent = META.data_version;
   }
 
-  function populateDisclosures() {
-    var d = META.disclosures;
-    var order = [
-      d.reanalysis, d.convective, d.confound, d.aggregates, d.boundary, d.sowing,
-      d.agency, d.cotton, d.sample, d.not_forecast,
-      d.forecast_method, d.forecast_area, d.forecast_specimens,
-      d.attribution, d.percentiles
-    ].filter(function (t) { return !!t; });
-    els.disclosures.innerHTML = order.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("");
-    els.colophon.textContent =
-      "DATA_VERSION " + META.data_version + " · panel built " + META.panel_created_utc +
-      " · weather: " + META.weather_source + " (" + META.weather_licence + ")" +
-      " · yield: " + META.yield_source + " · boundaries: " + META.geojson_source +
-      " · district coordinates: " + META.centroid_method +
-      " · split: " + META.split;
-  }
-
   function init() {
     populateControls();
-    populateDisclosures();
     initMap();
     renderStats();
 
