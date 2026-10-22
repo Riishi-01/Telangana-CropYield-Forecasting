@@ -1,0 +1,48 @@
+name: Deploy dashboard to GitHub Pages
+
+# The dashboard is 6.2 MB, most of it vendored Plotly and the committed
+# data bundle, so this only runs when the site itself changes.  A commit
+# to src/ or README.md does not re-upload it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - dashboard/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+# Pages deploys by OIDC attestation, not by a stored credential, so this
+# workflow needs no secret and there is no token to leak or rotate.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one halfway: a cancelled
+# deploy can leave the live site with a half-updated artefact directory.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # path: dashboard publishes the CONTENTS of that directory as the
+      # site root, which is what puts index.html at / instead of at
+      # /dashboard/.  Every asset reference in the page is relative, so
+      # it keeps resolving from either location.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
