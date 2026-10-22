@@ -35,6 +35,56 @@ function run(d, w) {
   results.disclaimerVisible = !d.getElementById("markerDisclaimer").hidden;
   results.disclaimer = txt(d.getElementById("markerDisclaimer"));
 
+  // the DEFAULT state: the map opens on the 2026 prediction, cotton, and
+  // absolute yield
+  results.defaultSeason = d.getElementById("seasonSelect").value;
+  results.defaultMetric = d.getElementById("metricSelect").value;
+  results.defaultCrop = d.getElementById("cropSelect").value;
+  results.defaultMapNote = txt(d.getElementById("mapNote"));
+  results.defaultReadNote = txt(d.getElementById("readNote"));
+  results.seasonOptions = Array.prototype.map.call(
+    d.getElementById("seasonSelect").options, function (o) { return o.textContent.trim(); }
+  );
+  results.mapLabelsPredicted = d.querySelectorAll("#map .district-label").length;
+  results.mapNoteOnPrediction = results.defaultMapNote;
+
+  // the season readout's two charts carry the 2026 point, dashed
+  results.rainDashed = d.querySelectorAll(
+    "#rainChart .js-line[style*='dash']"
+  ).length;
+  results.yieldDashed = d.querySelectorAll(
+    "#yieldChart .js-line[style*='dash']"
+  ).length;
+  results.rainLastCategory = (function () {
+    var t = Array.prototype.map.call(
+      d.querySelectorAll("#rainChart .xtick text"), function (x) { return x.textContent; }
+    );
+    return t[t.length - 1];
+  })();
+  results.yieldLastCategory = (function () {
+    var t = Array.prototype.map.call(
+      d.querySelectorAll("#yieldChart .xtick text"), function (x) { return x.textContent; }
+    );
+    return t[t.length - 1];
+  })();
+
+  // the state summary: five rows, 2026 and the state average under the crop
+  results.summaryRows = d.querySelectorAll("#stateSummary tbody tr").length;
+  results.summaryHeaders = Array.prototype.map.call(
+    d.querySelectorAll("#stateSummary thead th"), function (th) { return txt(th); }
+  );
+  results.summaryCrops = Array.prototype.map.call(
+    d.querySelectorAll("#stateSummary tbody th"), function (th) { return txt(th); }
+  );
+  results.summaryValues = Array.prototype.map.call(
+    d.querySelectorAll("#stateSummary tbody tr"),
+    function (tr) {
+      return Array.prototype.map.call(tr.children, function (td) { return txt(td); });
+    }
+  );
+  results.summaryDeltas = d.querySelectorAll("#stateSummary .state-summary__delta").length;
+  results.summaryNote = txt(d.getElementById("stateSummaryNote"));
+
   // the crop selector and the model facts follow the selected crop
   setSelect("cropSelect", "Rice");
   results.riceFacts = txt(d.getElementById("modelFacts"));
@@ -119,7 +169,7 @@ function run(d, w) {
     function (x) { return x.textContent; }
   );
   results.forecastXLabels = ticks;
-  results.forecastLastCategory = ticks.indexOf("2026") === ticks.length - 1;
+  results.forecastLastCategory = ticks.indexOf("2026-27") === ticks.length - 1;
   results.forecastSeasonCount = ticks.length;
 
   // the 2026 segment must be dashed, one per crop

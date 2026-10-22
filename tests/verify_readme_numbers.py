@@ -470,6 +470,65 @@ def main() -> None:
     check("the state line is area-weighted in the chart",
           "area-weighted" in app_js, "")
 
+    # ---- C12 the state summary table ----------------------------------------
+    # The dashboard's five-row summary must agree with the artefacts: four
+    # crops plus the kharif rainfall, 2026 against the state average.
+    if fs_path.exists():
+        fs = cfg.read_json(fs_path)
+        for crop, res in fs["crops"].items():
+            st = res["state"]
+            is_bales = res["unit"] == "bales/ha"
+            unit_label = "M bales" if is_bales else "M t"
+            m26 = st["total_2026"] / 1e6
+            mavg = st["reference_total_same_area"] / 1e6
+            d26 = 2 if abs(m26) >= 1 else 3
+            davg = 2 if abs(mavg) >= 1 else 3
+            check(f"the summary table gives the 2026 total for {crop}",
+                  f"{m26:.{d26}f} {unit_label}" in readme,
+                  f"{m26:.{d26}f} {unit_label}")
+            check(f"the summary table gives the average total for {crop}",
+                  f"{mavg:.{davg}f} {unit_label}" in readme,
+                  f"{mavg:.{davg}f} {unit_label}")
+            pct = st["pct_vs_reference"]
+            arrow = "\u2193" if pct < 0 else "\u2191"
+            check(f"the summary table gives the change for {crop}",
+                  f"{arrow} {abs(pct):.1f} %" in readme
+                  or f"{arrow} {abs(pct):.1f}%" in readme,
+                  f"{arrow} {abs(pct):.1f}%")
+
+    bundle_path = cfg.DASHBOARD_DATA / "bundle.js"
+    if bundle_path.exists():
+        raw = bundle_path.read_text()
+        bundle = json.loads(raw[raw.index("{"):].rstrip().rstrip(";"))
+        rs = bundle.get("rain_state") or {}
+        check("the bundle carries the state mean rainfall by season",
+              len(rs.get("per_season", {})) == 9, str(len(rs.get("per_season", {}))))
+        check("the nine-season state-wise rainfall average is in the bundle",
+              close(rs.get("avg_9season"), 848.3, 0.2), str(rs.get("avg_9season")))
+        # and the README must quote it
+        check("the README quotes the nine-season rainfall average",
+              "848 mm" in readme, "")
+        # the 2026 state mean against that base
+        mk = bundle.get("marker") or {}
+        if mk.get("state_mean") and rs.get("avg_9season"):
+            pct = 100.0 * (mk["state_mean"] / rs["avg_9season"] - 1.0)
+            check("the rainfall change against the nine-season average",
+                  close(pct, -42.5, 0.2), f"{pct:.2f}")
+            check("the README quotes the rainfall change",
+                  "42.5 %" in readme or "42.5%" in readme, f"{pct:.1f}")
+        # the 2026 map layer has its own fixed domains
+        d26 = bundle.get("domains_2026") or {}
+        check("the 2026 map layer has a domain for every crop",
+              set(d26) == {"Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)", "Rice", "deficit"},
+              str(sorted(d26)))
+        for crop in ["Cotton(lint)", "Arhar/Tur", "Moong(Green Gram)", "Rice"]:
+            dom = d26[crop]["yield"]
+            preds = bundle["forecast"][crop]["per_district"]
+            vals = [r["predicted_2026"] for r in preds]
+            check(f"the 2026 yield domain for {crop} covers its predictions",
+                  close(dom[0], min(vals), 1e-3) and close(dom[1], max(vals), 1e-3),
+                  f"{dom} vs {min(vals)}, {max(vals)}")
+
     # ---- §7 the twelve disclosures ----------------------------------------
     for phrase in [
         "Reanalysis, not observation", "Convective rainfall bias",
