@@ -258,6 +258,136 @@ absence stated as the primary limitation (P2-11, the A23 path).
 
 ---
 
+## C10 — the 2026 predicted yield is now IN SCOPE, and the measure is yield per hectare
+
+**Owner decision, 2026-10-22.** This supersedes C9's "2026 is a diagnostic, not a
+forecast" and the corresponding prohibition in SRS §2.2 and IMPROVEMENT_PLAN P3-12.
+Those prohibitions are retained above as history; what follows is what now governs.
+
+**C10.1 — scope.** A predicted-yield display is in scope. SRS §2.2's entries "Live
+2026 yield forecasting" and "Any prediction of yield for years not covered by DES
+observations" are withdrawn. What is still prohibited: production totals presented
+as an independent claim, a "rainfall −x% → yield −y%" chaining, and any 2026
+figure published for a crop whose model has no statistically supported shape.
+
+**C10.2 — one model per crop.** The single shared specification is replaced by a
+per-crop selection. Four candidate specifications are scored by leave-one-season-out
+cross-validation INSIDE the training block; the validation block is evaluated once,
+after selection, so the reported skill is not a selection statistic. A second gate
+applies: **a specification may only predict 2026 if it produces a positive yield for
+every district at the observed 2026 rainfall.** Arhar's quadratic passes the first
+gate and fails the second — its curve goes negative below ~440 mm, the 2026 state
+mean is 488 mm, and it returns negative yields for 19 of 32 districts. The
+rejection and its reason are recorded, not silently dropped.
+
+| Crop | Selected | Test skill (selected) | Test skill (shared spec) |
+|---|---|---|---|
+| Cotton (lint) | linear | **−0.235** | −0.405 |
+| Arhar / Tur | linear (quadratic rejected on validity) | **+0.006** | +0.033 |
+| Moong (green gram) | linear | **−0.017** | −0.023 |
+| Rice | linear | **+0.078** | −0.111 |
+
+Rice's forecast skill improves from −0.111 to +0.078. The quadratic remains a
+FINDING for rice (β₂ p = 0.018, R* = 1,354 mm) but is not the model used to
+predict; the two are reported separately and the reason is stated.
+
+**C10.3 — the measure is yield per hectare, area-weighted.** A production total
+mixes productivity with land utilisation. Every level is therefore built as a
+yield per hectare, and every aggregation to the state is **area-weighted**:
+`SUM(area_i × yield_i) / SUM(area_i)`. The unweighted mean of district yields is
+NOT used anywhere: rice district area spans 180× (720 ha to 129,633 ha per
+district-season), so an unweighted mean weights a 720 ha district the same as a
+129,633 ha one. On the reference period this choice moves arhar's state figure by
+13.6 % and flips the sign of its 2026 comparison.
+
+**C10.4 — the 2026 area baseline.** 2026 planted area does not exist and cannot be
+forecast. Each district's **2022-23 kharif area** is the baseline, applied
+IDENTICALLY to the 2026 prediction and to the Telangana average, so the comparison
+isolates yield from land utilisation. The assumption is stated in the artefact, the
+README and on the dashboard. It moves the state percentages by up to 7.4 points
+(arhar), which is why it is stated rather than buried.
+
+**C10.5 — the 2026 state figures** (area-weighted, 2022-23 area on both sides):
+
+| Crop | 2026 yield/area | Telangana average | Δ per ha | Δ % | Δ total |
+|---|---|---|---|---|---|
+| Cotton (lint) | 2.029 bales/ha | 2.645 | −0.615 | −23.3 % | −1,245,059 bales |
+| Arhar / Tur | 0.837 t/ha | 0.771 | +0.066 | +8.6 % | +15,057 t |
+| Moong (green gram) | 0.756 t/ha | 0.618 | +0.138 | +22.4 % | +3,734 t |
+| Rice | 3.151 t/ha | 3.327 | −0.176 | −5.3 % | −462,623 t |
+
+**C10.6 — a delivered data value is retained and is visible.** Mulugu's 2019-20
+arhar cell reads 891 t on 39 ha (22.85 t/ha) against the district's 0.62–0.91 t/ha
+in its other years; it is almost certainly a decimal error in the DES file. The
+owner elected to keep the file exactly as delivered, so the row stays: arhar's
+model keeps its degraded fit (b₁ = −0.000150, R² = 0.235, against +0.000085 and
+0.463 with the row excluded) and Mulugu's 2026 prediction is 5.21 t/ha, which
+appears in the forecast table as **+494 %** against the state mean. The table
+carries a footnote naming the cause, so the number is not hidden and not silently
+wrong — it is arithmetically correct given the delivered data, and its cause is
+stated.
+
+**C10.7 — the disclosure set grows from 12 to 15.** The new entries cover the
+forecast method and its skill, the 2026 area baseline, and the absence of a
+prediction interval (with three held-out seasons there is not enough data to
+calibrate one honestly).
+
+---
+
+## C11 — the dashboard leads with the forecast: one chart, and the response curve retires
+
+**C11.1 — the response curve is retired from the page.** The "Rainfall → yield
+response" section is removed from the dashboard and replaced by the forecast
+chart. The response curve remains in the analysis (README §5, figures F1–F3): it
+is the *evidence* behind the forecast, and the page now leads with the forecast
+itself. The season readout keeps the model facts — the rainfall effect, the
+curvature, the optimum R\* and its p-value — so the evidence is still on the
+page, in words.
+
+**C11.2 — the forecast becomes ONE chart with a crop selector.** The four small
+multiples are replaced by a single chart: nine observed seasons and then 2026,
+with a selector offering **All crops** or one crop, and the crop names behaving
+as ticks. Clicking a crop focuses the chart on it and reveals the district
+observations behind the line; clicking **All** ticks every crop. The forecast
+districts table is unchanged, including its "2026-27 · 32 districts · bales/ha"
+subtitle.
+
+**C11.3 — the axis is indexed, and the state line is area-weighted.** Cotton is
+in bales per hectare and the other three in tonnes, so four crops cannot share a
+raw axis. Each crop is indexed to **its own Telangana average over the fitted
+period (2016-17 → 2022-23 = 100)** — the same area-weighted reference the
+forecast table uses — so the 2026 endpoint reads directly as the forecast
+difference (cotton 76.7, arhar 108.6, moong 122.3, rice 94.7).
+
+The state line changes from the **unweighted district median** to the
+**area-weighted state yield per hectare** (`SUM(area × yield) ÷ SUM(area)`).
+This is a substantive improvement, not a cosmetic one: the area-weighted figure
+is a state total divided by a state area, so it is the same quantity on both
+sides of the 2016 reorganisation, and the line therefore runs through 2014-15
+without a break. The median is not comparable across that boundary. The
+unweighted mean of district yields remains unused, as C10.3 requires.
+
+**C11.4 — the 2018-19 districts table is retired.** The observed-season
+districts table is removed from the page. Per-district observation for the
+selected season remains on the map, per-district 2026 predictions remain in the
+forecast table, and the CSV export still ships the same rows.
+
+**C11.5 — the scale rule.** In the focused (single-crop) view the y range is
+set by the state line, the 2026 prediction **and the 2nd-to-98th percentile of
+the district observations** — a percentile, not the extremes. One delivered
+value (Mulugu, arhar 2019-20) would otherwise flatten the chart, and the raw
+minimum and maximum would let a single district decide the scale. Observations
+outside the range are counted and reported under the chart; none is deleted.
+In the "all crops" view there are no district points, so the range is the state
+line and the prediction alone.
+
+**C11.6 — the language.** "Does the weather model earn its place?" is the
+heading for the model-comparison section in both the report and the page, and
+the report's register is technical but plain: *model specification*, *holdout
+period*, *out-of-sample skill score*, *area-weighted*, *baseline*.
+
+---
+
 ## Verification status
 
 | Gate | Status |
@@ -275,8 +405,8 @@ absence stated as the primary limitation (P2-11, the A23 path).
 | G8 ΔR² reported for every modelled crop | **PASS** — including the null results |
 | G9 chronological split; skill reported at any sign | **PASS** — 3 of 4 crops negative |
 | G10 F1–F4 exist; no dual axis; no jet/rainbow; greyscale-checked | **PASS** |
-| G11 dashboard QA | **PASS** — 34 headless checks |
-| G12 all 12 disclosures present | **PASS** — in README §7 and in the dashboard footer |
+| G11 dashboard QA | **PASS** — 41 headless checks |
+| G12 all 15 disclosures present | **PASS** — in README §7 and in the dashboard footer |
 | **G1 year mapping verified (C9.1)** | **PASS** — executable 3-alignment gate; same-year is the best fit |
 | **G2 no "season effects" wording (C9.2)** | **PASS** — 0 hits for `season (fixed )?effect` in `src/`, `README.md`, dashboard |
 | **G3 fitted range stated (P0-3)** | **PASS** — `model_summary.json` and `fetch_manifest.json` both record it |
@@ -284,4 +414,10 @@ absence stated as the primary limitation (P2-11, the A23 path).
 | **G6 robustness grid (P1-6)** | **PASS** — 6 cells run, row 7 deferred, verdict line in README §5 |
 | **G9 heterogeneity LRT (P1-9)** | **PASS** — p reported for all 4 crops; shared slope not rejected |
 | **G11b 2026 implied range gated (P4-15)** | **PASS** — published for rice only; 3 crops withheld with a reason |
+| **G11c per-crop forecast model (C10.2)** | **PASS** — CV selected on train only; arhar's quadratic rejected on validity; 0 negative predicted yields |
+| **G11d state figures area-weighted (C10.3)** | **PASS** — the total and the yield/area agree in percentage by construction |
+| **G11e 2026 area baseline stated (C10.4)** | **PASS** — 2022-23 area, applied identically to both sides |
+| **G11f one forecast chart, indexed (C11.2, C11.3)** | **PASS** — 1 chart, All + 4 crop ticks, 10 x categories with 2026 last, 4 dashed 2026 segments |
+| **G11g the retired sections are gone (C11.1, C11.4)** | **PASS** — no `#curveChart`, no `#districtTable`, no `#forecastGrid` in the DOM |
+| **G11h the 2026 districts table is kept (C11.2)** | **PASS** — "2026-27 · 32 districts · bales/ha" unchanged |
 | G13 local commits clean; no push | **PASS** — no remote configured |

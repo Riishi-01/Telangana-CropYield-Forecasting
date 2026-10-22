@@ -50,9 +50,15 @@ must therefore test both and report the comparison.
 - Per-crop season windows (single common window used — see §5.2)
 - Satellite NDVI / Sentinel-2 analysis
 - Parent-district reconstruction of pre-2016 boundaries (see §4.3 — constraint identified)
-- Live 2026 yield forecasting (see §5.5)
 - Rabi season analysis
-- Any prediction of yield for years not covered by DES observations
+- ~~Live 2026 yield forecasting~~ — **WITHDRAWN (ERRATA C10): a predicted-yield
+  display is now in scope.** The 2026 figures are a model prediction, published
+  per crop from that crop's own validated model, and every prediction carries its
+  out-of-sample skill score.
+- ~~Any prediction of yield for years not covered by DES observations~~ —
+  **WITHDRAWN (ERRATA C10)**, on the same terms. Still prohibited: production
+  totals as an independent claim, "%-chaining" from rainfall to yield, and any
+  2026 figure for a crop whose model has no supported shape.
 
 ### 2.3 Non-negotiable constraints
 
@@ -288,20 +294,52 @@ central claim on open data for Telangana.
 
 ### 5.6 2026 handling — MANDATORY
 
-2026 yield observations **do not exist** in the DES data (ends 2022-23).
+2026 yield observations **do not exist** in the DES data (the series ends at
+2022-23). The 2026 figures are therefore **model predictions**, and this
+section governs how they are produced, labelled and bounded.
 
-**Permitted:** 2026 *observed* rainfall from ERA5, plotted as a vertical marker on the
-fitted curve, with implied yield read off the curve.
+**Permitted:**
+- 2026 *observed* rainfall from ERA5, as the input to the 2026 prediction
+- A 2026 prediction per crop, from that crop's own model, with its out-of-sample
+  skill score printed beside it
+- A dashed, visually separated 2026 segment, with the extrapolation gap explicit
 
 **Prohibited:**
-- Any dotted/extended "2026 predicted yield" line on the same visual plane as fitted data
-  without explicit visual separation of the extrapolation gap
-- Any language implying 2026 yield was forecast, estimated, or modelled
+- A 2026 figure for a crop whose selected specification returns a non-positive
+  yield at any district's observed 2026 rainfall
+- Any language implying the 2026 prediction has been validated against a 2026
+  outcome
+- Production totals as an independent claim: the 2026 total is the prediction
+  rescaled by area, and the area is an assumption
+- Any prediction interval — with three holdout seasons there is not enough data
+  to calibrate one honestly
 
 **Required labelling wherever 2026 appears:**
-> "Response curve fitted on 2016-17 – 2022-23 observed yields (the primary panel).
-> 2026 rainfall is ERA5 observed. Any implied yield is a reading of the fitted curve, not a
-> validated forecast — the extrapolation gap is 4+ years."
+> "2026 is a model prediction, not an observation and not a validated forecast. Each
+> crop is forecast by its own specification, selected by leave-one-season-out
+> cross-validation inside the fitting period; the out-of-sample skill of that
+> specification is printed beside every prediction."
+
+**Model selection (ERRATA C10.2).** One specification per crop, chosen by
+leave-one-season-out cross-validation **inside the fitting period only**; the
+holdout block is evaluated once afterwards, so the reported skill is a holdout
+statistic and not a selection statistic.
+
+**Measure and aggregation (ERRATA C10.3, C10.4).**
+- The measure is **yield per hectare**. A production total mixes productivity
+  with land utilisation and is not a yield.
+- State figures are **area-weighted**: `SUM(area × yield) ÷ SUM(area)`. The
+  unweighted mean of district yields is not used anywhere.
+- The 2026 area baseline is each district's **2022-23 kharif area**, applied
+  identically to the prediction and to the Telangana average, and stated
+  wherever the 2026 total appears.
+
+**Display (ERRATA C11).** The 2026 prediction is drawn on a **categorical**
+time axis — the nine observed seasons, then 2026 as its own final step — with
+the 2026 segment **dashed**, because a continuous axis would place 2026 to the
+left of the record and read as "before 2014". Where crops measured in
+different units share one axis, the axis is **indexed** to each crop's own
+Telangana average, and the index base is stated where the chart is.
 
 ---
 
@@ -516,9 +554,13 @@ These must appear verbatim in README and in any derived document. They are not o
 9. **Small sample per crop.** ~220 district-year observations per crop in the primary
    panel. *(Verified against the delivered file: Cotton 220, Rice 220, Arhar/Tur 219,
    Moong 209.)*
-10. **2026 is not forecast.** See §5.6.
-11. **Attribution.** ERA5 via Open-Meteo — CC BY 4.0. DES — Govt. of India open data.
-12. **Rule-based percentile bands** are descriptive, not inferential. No confidence intervals
+10. **2026 is a model prediction, not a validated forecast.** See §5.6.
+11. **2026 planted area does not exist.** The state-level 2026 figures are
+    area-weighted on each district's 2022-23 kharif area, applied identically
+    to the prediction and to the Telangana average. The 2026 total is the
+    prediction rescaled by that area, not an independent claim.
+12. **Attribution.** ERA5 via Open-Meteo — CC BY 4.0. DES — Govt. of India open data.
+13. **Rule-based percentile bands** are descriptive, not inferential. No confidence intervals
     are claimed.
 
 ---

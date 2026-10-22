@@ -1,11 +1,12 @@
 # Telangana kharif yield–weather explorer
 
-**How much of a kharif season's outcome is explained by how much it rained?**
+**Forecasting kharif yield from rainfall.**
 
 An empirical analysis of the relationship between kharif-season rainfall and crop yield
 across Telangana's districts, with an interactive dashboard for exploring it. Yields come
 from the Directorate of Economics & Statistics (DES); rainfall comes from ERA5 reanalysis
-via the Open-Meteo archive API. Nothing here is a forecast.
+via the Open-Meteo archive API. The 2026 figures are **model predictions**, and every
+one of them carries its out-of-sample skill score.
 
 - **DATA_VERSION** `1.1.0`
 - **Scope** Telangana · Kharif · 2014-15 → 2022-23 · four crops (Cotton lint, Arhar/Tur, Moong, Rice)
@@ -19,10 +20,17 @@ via the Open-Meteo archive API. Nothing here is a forecast.
 > (p = 0.018), giving a supported optimum at **1,354 mm**. The other three
 > crops — cotton, arhar/tur and moong — show **no supported relationship**
 > (p = 0.293, 0.069, 0.714). Cotton's apparent signal in a pooled regression
-> is a **between-district confound**, not rainfall. Out of sample, the
-> weather-only model **does not beat a district-crop median baseline** for
-> three of the four crops, so the relationship is real but does not forecast.
-> See [Results](#5-results).
+> is a **between-district confound**, not rainfall. See [Results](#5-results).
+
+> **The 2026 forecast, in yield per hectare.** Each crop is forecast by its
+> **own** model — one shared specification cannot be right for four crops —
+> and each model is selected by leave-one-season-out cross-validation inside
+> the fitting period, with the validation block evaluated once afterwards.
+> **Two of the four models beat the district-median baseline** (arhar +0.006,
+> rice +0.078); two do not (cotton −0.235, moong −0.017), so their predictions
+> mean *no evidence of a change*, not a forecast. The state figures are
+> area-weighted on 2022-23 kharif area — the baseline for a 2026 planted area
+> that does not exist. See [The 2026 forecast](#54-the-2026-forecast).
 
 > **The single biggest limitation.** No irrigation data is used anywhere in this
 > analysis. Telangana is heavily borewell-irrigated, and crops recorded as
@@ -30,8 +38,8 @@ via the Open-Meteo archive API. Nothing here is a forecast.
 > the rainfall–yield relationship mechanically**, and the weak or absent
 > relationships reported below may be a consequence of that buffering rather
 > than of rainfall being unimportant. This is the leading candidate
-> explanation for the nulls and it is **untested** here. See
-> [Limitations](#7-limitations--all-twelve).
+> explanation for the null results and it is **untested** here. See
+> [Limitations](#7-limitations--all-fifteen).
 
 ---
 
@@ -143,10 +151,25 @@ Jul–Sep, Jun–Sep (base) and Jun–Oct — to test whether the conclusion dep
 sowing window (`src/12_window_sensitivity.py`). A gate asserts the base window
 reproduces the shipped Stage 1 fit exactly.
 
-**Validation.** Chronological split only — train ≤ 2019-20 (4 seasons), test ≥ 2020-21
-(3 seasons). Random splits leak across autocorrelated weather years, and none appear in
-the codebase. The baseline is the district-crop median yield computed on the train
-period only. Skill = 1 − RMSE_model / RMSE_baseline.
+**Out-of-sample validation.** A chronological split only — train ≤ 2019-20
+(4 seasons), holdout ≥ 2020-21 (3 seasons). Random splits leak across
+autocorrelated weather years, and none appear in the codebase. The baseline is
+the district-crop median yield computed on the training period only. The skill
+score is `1 − RMSE_model / RMSE_baseline`; a positive value means the model
+beats that baseline.
+
+**Forecasting 2026.** Each crop is forecast by its **own** specification — one
+shared model cannot be right for four crops at once. Four candidates are scored
+by leave-one-season-out cross-validation **inside the fitting period**
+(2016-17 … 2019-20), and the holdout block (2020-21 … 2022-23) is evaluated
+**once, afterwards**, so the reported skill is a holdout statistic and not a
+selection statistic. A second gate then applies: a specification may predict
+2026 only if it produces a **positive yield for every district** at the observed
+2026 rainfall. The measure is **yield per hectare**; state figures are
+**area-weighted** (`SUM(area × yield) ÷ SUM(area)`), and the unweighted mean of
+district yields is not used. Each district's **2022-23 kharif area** is the
+baseline for a 2026 area that does not exist, applied identically to the
+prediction and to the Telangana average.
 
 **Why the effective sample is smaller than the row count.** Rainfall is a
 district-year variable; yield is a district-year-crop variable. For a single-crop
@@ -246,7 +269,7 @@ the within-district correlation between the yield anomaly and the rainfall anoma
 | 6 · without district fixed effects (pooled) | **+0.256\*** | +0.124 | −0.124 | **+0.113\*** |
 | 7 · ERA5-Land 0.1° | deferred | deferred | deferred | deferred |
 
-**Verdict: the rice result is robust; the three nulls are robust too — and
+**Verdict: the rice result is robust; the three null results are robust too — and
 cotton's pooled signal is a confound.**
 
 - **Rice survives within-district** in 3 of the 4 robustness specifications
@@ -344,7 +367,7 @@ One further detail: the Stage 2 arhar model *does* carry a significant quadratic
 (p = 0.026, R\* = 1,083 mm) once the dry-spell and heat terms are in the model, which
 Stage 1 does not. That is a specification-dependent result and is reported as such.
 
-### Validation — does the model beat a median baseline?
+### Does the weather model earn its place?
 
 Chronological split: train 2016-17 … 2019-20, test 2020-21 … 2022-23. Baseline is the
 district-crop median yield computed on the train period only.
@@ -375,41 +398,13 @@ training data. Test rows are therefore predicted with the reference year's effec
 The no-year-FE column re-runs the test without differencing out the year and gives
 the same answer for every crop, so the conclusion does not rest on that convention.
 
-### The 2026 rainfall reading — a diagnostic, not a forecast
-
-**2026 is a diagnostic, not a forecast, and nothing in this project predicts a 2026
-yield.** The 2026 yield does not exist, the rainfall–yield relationship is too weak
-to forecast with, and the implied values below are readings of a fitted curve, not
-estimates of what will happen.
+### The 2026 rainfall reading
 
 ERA5 observed kharif rainfall for 1 Jun – 30 Sep 2026, across the 32 district
 centroids: **state mean 488 mm**, median 439 mm, p10–p90 = 285–731 mm, range 248–816 mm.
 The fitting period's observed range was 374–1,827 mm, so 2026 sits at the **1.4th
 percentile** of the historical distribution and **9 of 32 districts fall below the
 observed minimum**.
-
-**What is published for 2026, and what is not:**
-
-| | Published | Withheld |
-|---|---|---|
-| 2026 observed rainfall (ERA5) | state mean, district band, position on the fitted curve | — |
-| Implied 2026 yield | **Rice only**, as a **range**: −12.7 % to −4.9 % of each district's own normal, with the state-mean reading (−9.9 %) as a point estimate inside the band | Cotton, arhar, moong — their curves have no statistically supported shape |
-| Production totals (tonnes, bales) | **none** | A 2026 planted-area figure does not exist, so no production forecast is possible |
-
-**Why the implied range is withheld for three of the four crops.** Reading a yield off
-a curve with no supported shape is not a reading, it is an extrapolation. For arhar —
-whose quadratic term is not significant (p = 0.069) — the 2026 reading returns
-**negative yields for 6 of 32 districts**, which is physically impossible. Those
-crops therefore show the observed 2026 rainfall position and say plainly that no
-implied yield is offered. The gate is the same rule that gates the vertex: publish
-a reading only where the relationship is statistically supported.
-
-**Why rice's range is a band and not a number.** The curve is read at each
-district's own 2026 rainfall, so there is no single implied value — there is a
-distribution of readings, from −12.7 % (p10) to −4.9 % (p90) of each district's own
-normal rainfall, with the state-mean reading at −9.9 % inside it. A single figure
-would hide that spread. The band is drawn, not a line, and the figure and the
-dashboard both label it as a reading rather than a forecast.
 
 **A note on the drought context.** 2026 is dry in *total* (488 mm) but not dry in
 *deficit*: its longest dry run (12 days) and total dry days (42) are both close to
@@ -418,6 +413,127 @@ their historical medians (18.5 and 55), and its heat days are *above* median
 than long dry gaps. This matters for interpretation: the crop-critical question is
 not "how much rain fell" but "how long were the gaps", and on that measure 2026
 looks much less extreme than its 1.4th-percentile rainfall total suggests.
+
+### 5.4 The 2026 forecast
+
+**2026 is a model prediction.** The yield does not exist, so every 2026 figure below
+is a prediction from a fitted model — and each one is published with that model's
+out-of-sample skill, so a reader can weigh it.
+
+**One model per crop.** A single specification cannot be right for cotton, arhar,
+moong and rice at once. Four candidates are scored by leave-one-season-out
+cross-validation **inside the training block** (2016-17 … 2019-20), and the
+validation block (2020-21 … 2022-23) is evaluated **once, afterwards** — so the
+reported skill is not a selection statistic. A second gate then applies: *a
+specification may only predict 2026 if it produces a positive yield for every
+district at the observed 2026 rainfall.*
+
+| Crop | Selected | Test skill (selected) | Test skill (shared spec, before) |
+|---|---|---|---|
+| Cotton (lint) | linear | **−0.235** | −0.405 |
+| Arhar / Tur | linear *(quadratic rejected on validity)* | **+0.006** | +0.033 |
+| Moong (green gram) | linear | **−0.017** | −0.023 |
+| Rice | linear | **+0.078** | −0.111 |
+
+**Arhar's quadratic is rejected, and the reason is recorded.** It has the best
+cross-validation score of the four, but its curve goes negative below ~440 mm, the
+2026 state mean is 488 mm, and it returns **negative yields for 19 of 32
+districts**. A negative yield is not a forecast, it is an extrapolation failure, so
+the next valid specification is used. The rejection and its reason are in
+`data/processed/forecast_models.json`.
+
+**The rice vertex is a finding, not the forecasting model.** The curvature is real
+(β₂ p = 0.018, R\* = 1,354 mm) and survives the robustness grid, but the *linear*
+specification forecasts better (−0.111 → +0.078). Both are reported, separately.
+
+**The measure is yield per hectare, and every state figure is area-weighted.** A
+production total mixes productivity with land utilisation. The state figure is
+`SUM(area_i × yield_i) / SUM(area_i)`; the unweighted mean of district yields is
+not used anywhere, because it weights a 720 ha district the same as a 129,633 ha one.
+On the reference period that choice moves arhar's state figure by 13.6 % and flips
+the sign of its 2026 comparison.
+
+**The 2026 area baseline.** 2026 planted area does not exist and cannot be
+forecast. Each district's **2022-23 kharif area** is the baseline, applied
+**identically** to the 2026 prediction and to the Telangana average, so the
+comparison isolates yield from land utilisation. It moves the state percentages by
+up to 7.4 points (arhar), which is why it is stated rather than buried.
+
+| Crop | 2026 yield/area | Telangana average | Δ per ha | Δ % | 2026 total | Δ total |
+|---|---|---|---|---|---|---|
+| Cotton (lint) | 2.029 bales/ha | 2.645 | **−0.615** | **−23.3 %** | 4,107,087 bales | −1,245,059 |
+| Arhar / Tur | 0.837 t/ha | 0.771 | **+0.066** | **+8.6 %** | 190,556 t | +15,057 |
+| Moong (green gram) | 0.756 t/ha | 0.618 | **+0.138** | **+22.4 %** | 20,428 t | +3,734 |
+| Rice | 3.151 t/ha | 3.327 | **−0.176** | **−5.3 %** | 8,289,544 t | −462,623 |
+
+**Read these with the skill column beside them.** Cotton and moong **do not beat
+the district-median baseline** out of sample (−0.235 and −0.017), so their
+predictions mean *no evidence of a change*, not a forecast — and moong's +22.4 % is
+what a flat, non-significant model says (its rainfall coefficient is −0.0001, i.e.
+zero). Cotton's −23.3 % is the weakest of the four. Arhar and rice do beat the
+baseline, but +0.006 is a 0.6 % RMSE reduction — marginal.
+
+**No prediction interval is claimed.** With three held-out seasons there is not
+enough data to calibrate one honestly, and a false interval would be worse than
+none.
+
+### 5.5 How the forecast is drawn
+
+The dashboard draws one chart with all four crops on it, because that is the
+comparison a reader actually wants: what does the 2026 prediction do against
+each crop's own history? Two choices make that possible.
+
+**The axis is indexed.** Cotton is measured in bales per hectare and the other
+three in tonnes per hectare, so four crops cannot share a raw axis. Each crop is
+indexed to its own Telangana average over the fitted period (2016-17 → 2022-23
+= 100) — the same area-weighted reference the forecast table uses. The 2026
+endpoint then reads directly as the forecast difference: cotton 76.7,
+arhar 108.6, moong 122.3, rice 94.7.
+
+**The state line is area-weighted** — `SUM(area × yield) ÷ SUM(area)` over the
+districts reporting in each season. The unweighted mean of district yields is
+not used, and neither is the median: the area-weighted figure is a state total
+divided by a state area, so it is the same quantity on both sides of the 2016
+reorganisation, while the district-level medians are not. That is why the line
+runs through 2014-15 without a break, where a median line would have jumped.
+
+| Crop | 14-15 | 15-16 | 16-17 | 17-18 | 18-19 | 19-20 | 20-21 | 21-22 | 22-23 | **2026** |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Cotton (lint) | 81.5 | 79.6 | 92.4 | 103.5 | 79.1 | 121.5 | 93.0 | 96.2 | 110.1 | **76.7** |
+| Arhar / Tur | 64.1 | 54.4 | 87.7 | 103.6 | 83.8 | 117.1 | 100.6 | 99.7 | 114.2 | **108.6** |
+| Moong (green gram) | 80.0 | 77.7 | 98.6 | 103.3 | 101.8 | 127.5 | 67.2 | 96.9 | 108.7 | **122.3** |
+| Rice | 93.2 | 88.2 | 102.4 | 84.6 | 104.5 | 110.3 | 90.8 | 99.2 | 105.1 | **94.7** |
+
+*State yield per hectare, indexed to each crop's Telangana average
+(2016-17 → 2022-23 = 100). The 2016 reorganisation falls between 2015-16 and
+2016-17; the two pre-2016 seasons are the nine undivided parent districts, and
+29–32 of the 32 districts report in any one crop-season.*
+
+**The 2026 segment is dashed** because nothing has been observed for it, and it
+is drawn as a continuation of each crop's own line rather than as a separate
+mark. The chart is categorical in time: the nine observed seasons and then
+2026 as its own step, because a continuous axis would place 2026 to the *left*
+of the record — its rainfall is below every fitted observation — and that
+reads as "before 2014" rather than "a season that has not happened yet".
+
+**A crop can be focused on it.** The chart's selector offers all four crops or
+one; with a single crop the district observations appear behind the line, so
+the spread within a season is visible. The scale is then set by the state line,
+the 2026 prediction **and the 2nd-to-98th percentile of the district
+observations** — a percentile, not the extremes, because one delivered value
+(Mulugu, arhar 2019-20: 891 t on 39 ha) would otherwise flatten the whole
+chart. Observations that fall outside are counted and reported under the chart;
+none is deleted.
+
+**One delivered data value is retained, and it is visible.** Mulugu's 2019-20
+arhar cell reads **891 t on 39 ha** — 22.85 t/ha against the district's 0.62–0.91
+t/ha in its other years, almost certainly a decimal error in the DES file. The file
+is kept exactly as delivered, so the row stays: arhar's model keeps its degraded
+fit (b₁ = −0.000150, R² = 0.235, against +0.000085 and 0.463 with the row
+excluded) and **Mulugu's 2026 prediction is 5.21 t/ha**, which appears in the
+forecast table as **+494 %** against the state mean. The table carries a footnote
+naming the cause, so the number is neither hidden nor silently wrong — it is
+arithmetically correct given the delivered data, and its cause is stated.
 
 ## 6. Figures
 
@@ -428,6 +544,8 @@ looks much less extreme than its 1.4th-percentile rainfall total suggests.
 | `figures/f3_validation.png` | Out-of-sample RMSE against the median baseline, and the skill score |
 | `figures/f4_choropleth.png` | Cotton yield anomaly (%) by district for 2022-23, RdYlBu with zero at the midpoint |
 | `figures/f5_window_sensitivity.png` | The response curve refitted on three season windows |
+| `figures/f6_forecast.png` | The 2026 forecast as the dashboard draws it: four crops on one indexed axis, the dashed 2026 segment, the Telangana average at 100 |
+| `figures/f7_forecast_panels.png` | The same forecast per crop, in each crop's own unit, with the district observations |
 
 The interactive explorer is `dashboard/index.html`. It opens straight from disk
 (`file://`), needs no server, and fetches nothing from a CDN: Plotly, Leaflet and the
@@ -436,7 +554,15 @@ fonts are vendored in the repository. The map offers three metrics — yield ano
 season's rainfall against that district's own 2016-17–2022-23 median, so the map shows
 where a season was dry *for that district* rather than for the state).
 
-## 7. Limitations — all twelve
+The report reads in one direction: the map and the season readout establish what was
+observed; the forecast chart then states what the model predicts for 2026 and how well
+that model has performed out of sample; the districts table carries the prediction to
+district level; and "Does the weather model earn its place?" puts the model's value
+against the alternatives. The rainfall–yield response curve is reported in §5 and in
+F1–F3 rather than on the page: it is the evidence behind the forecast, and the page
+leads with the forecast itself.
+
+## 7. Limitations — all fifteen
 
 **Limitation 3 is the single biggest limitation in this analysis, and it is not a
 footnote.** No irrigation data is used anywhere. Telangana is heavily
@@ -474,36 +600,45 @@ district irrigation statistics that would make this testable.
    about 0.2 or larger, so a genuinely small relationship (r ≈ 0.07, as cotton's) would
    not be detected here — the null for cotton is a *bounded* null, not an absence of
    any effect.
-10. **2026 is not forecast.** Response curve fitted on observed yields. 2026 rainfall is
-    ERA5 observed. Any implied yield is a reading of the fitted curve, not a validated
-    forecast — the extrapolation gap is 4+ years, and the implied range is published for
-    rice only, where the fitted curve has a statistically supported shape.
+10. **2026 is a model prediction, not a validated forecast.** Each crop is forecast by
+    its own specification, selected by leave-one-season-out cross-validation inside the
+    fitting period. Two of the four models do not beat a district-median baseline, so
+    their predictions mean *no evidence of a change*. No prediction interval is
+    claimed: with three held-out seasons there is not enough data to calibrate one.
 11. **Attribution.** ERA5 via Open-Meteo — CC BY 4.0. DES — Govt. of India open data.
 12. **Rule-based percentile bands** are descriptive, not inferential. No confidence
     intervals are claimed.
+13. **2026 planted area does not exist.** The state-level 2026 figures are
+    area-weighted on each district's 2022-23 kharif area, applied identically to the
+    prediction and to the Telangana average. It moves the state percentages by up to
+    7.4 points (arhar).
+14. **One delivered data value is retained as-is.** Mulugu's 2019-20 arhar cell reads
+    891 t on 39 ha — 22.85 t/ha against the district's 0.62–0.91 t/ha — and it
+    inflates arhar's fit and Mulugu's 2026 prediction. It is footnoted wherever it
+    appears rather than silently corrected.
+15. **Rice's optimum rests on a thin tail.** Only 11 of 220 district-seasons carry
+    rainfall above the 1,354 mm vertex, and the fitted curve is still rising over most
+    of the observed range. The vertex is real in-sample and survives the robustness
+    grid, but its exact position is poorly determined — and the *linear* specification
+    is what forecasts rice, not the quadratic.
 
 Beyond the twelve, and specific to this build:
 
-13. **The delivered DES file covers 2014-15 → 2022-23 only.** The specification assumed
+16. **The delivered DES file covers 2014-15 → 2022-23 only.** The specification assumed
     2000-01 → 2022-23; the file does not contain the earlier seasons. See
     `plan/ERRATA.md` — the file wins, and the panel windows were narrowed accordingly.
     **The "not enough seasons" hypothesis is therefore untested**: with 7 fitted
     seasons and 3 held out, a relationship of the size seen for rice cannot be
     distinguished from noise in the other three crops with confidence.
-14. **No parent-district reconstruction is attempted.** The 2016 division is zero-sum
+17. **No parent-district reconstruction is attempted.** The 2016 division is zero-sum
     (x → y+z ⟹ x = y+z), but Suryapet was formed from parts of two parents, so those
     parents cannot be rebuilt from the children the dataset names. Post-2016 districts
     are used as individual entities with their new names (`data/geo/PARTITION_NOTE.md`).
-15. **The year fixed effects of the test period are unobserved.** Out-of-sample
+18. **The year fixed effects of the test period are unobserved.** Out-of-sample
     predictions use the reference year's effect; the no-year-FE column shows the
     conclusion is unchanged.
-16. **Four crops only.** The source file carries 36 kharif crop groups; the other 32 are
+19. **Four crops only.** The source file carries 36 kharif crop groups; the other 32 are
     outside the project's scope and are not in the delivered dataset.
-17. **The rice optimum rests on a thin tail.** Only 11 of 220 district-seasons carry
-    rainfall above the 1,354 mm vertex, and the fitted curve is still rising over most
-    of the observed range. The vertex is real in-sample and survives the robustness
-    grid, but its exact position is poorly determined.
-
 ## 8. Reproduction
 
 ```bash
@@ -518,13 +653,14 @@ for step in 01_ingest_des 02_build_geo 03_fetch_era5 04_features \
             05_build_panel 06_model_stage1 07_model_stage2 08_validate \
             09_figures 12_window_sensitivity 12_figure_window \
             13_robustness_grid 14_slope_heterogeneity \
+            16_forecast_models 15_forecast_series 17_figure_forecast \
             10_build_dashboard; do
     .venv/bin/python "src/${step}.py"
 done
 
 # 3. the checks
 .venv/bin/python tests/verify_readme_numbers.py   # 164 README numbers vs the artefacts
-bash tests/run_dashboard_qa.sh                     # 34 headless checks
+bash tests/run_dashboard_qa.sh                     # 41 headless checks
 ```
 
 - `src/03_fetch_era5.py` takes an optional window argument: `analysis` (default),
@@ -543,6 +679,16 @@ bash tests/run_dashboard_qa.sh                     # 34 headless checks
   verdict line; `src/14_slope_heterogeneity.py` writes the mixed-effects
   heterogeneity LRT. Both are inputs to the README tables, and the verifier
   checks the README against them.
+- `src/16_forecast_models.py` selects a specification PER CROP by
+  leave-one-season-out CV inside the training block and applies the validity
+  gate (a specification may only predict 2026 if it yields a positive value for
+  every district at the observed 2026 rainfall). It fails the build rather than
+  shipping a model that does not pass.
+- `src/15_forecast_series.py` turns the selected models into the per-district
+  2026 predictions and the area-weighted state figures. It fails the build if any
+  predicted yield is non-positive, or if the total and the yield/area disagree
+  in percentage — which is the check that the area baseline is being applied
+  consistently to both sides.
 - The panel, the model summary and every manifest carry their own SHA-256 in
   `data/manifests/`.
 - **What does and does not reproduce.** The data artefacts rebuild byte-identically
@@ -588,11 +734,12 @@ checksummed there.
 data/raw/          immutable source responses (gitignored, checksummed)
 data/interim/      long-format DES, daily weather, features (gitignored)
 data/processed/    crops_kharif_clean, panel, model summary, robustness
-                   grid, slope heterogeneity (gitignored)
+                   grid, slope heterogeneity, forecast models and series
+                   (gitignored)
 data/geo/          districts.csv, districts.geojson, name_crosswalk.csv, PARTITION_NOTE.md
 data/manifests/    fetch_manifest.json, checksums.sha256, per-stage manifests
-src/01..14         the pipeline, one script per stage
-figures/           F1–F5 static PNGs
+src/01..17         the pipeline, one script per stage
+figures/           F1–F6 static PNGs
 dashboard/         the static interactive site
 tests/             artefact verification and the headless dashboard QA
 plan/              SRS.md, GUIDE.md, ERRATA.md, IMPROVEMENT_PLAN.md
