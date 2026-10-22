@@ -435,6 +435,77 @@ def main() -> None:
             },
         }
 
+    # -- the 2026 map layer: its own fixed domains ---------------------------
+    # The observed map uses one fixed domain per crop, so the scale never
+    # moves between seasons or districts.  The 2026 predictions occupy only
+    # the middle of the observed range, so on the observed domain they would
+    # all land in the same pale band and the map would say nothing.  The
+    # prediction layer therefore has its own fixed domain, per crop, still
+    # fixed across the districts and never rescaled by the selection.
+    domains_2026: dict = {}
+    if forecast:
+        for crop, res in forecast.items():
+            own = (
+                primary[primary["crop"] == crop]
+                .groupby("district_slug")["yield"]
+                .mean()
+            )
+            preds = [
+                (r["slug"], r["predicted_2026"]) for r in res["per_district"]
+            ]
+            ys = [p for _, p in preds if p is not None]
+            an = [
+                100.0 * (p / own[s] - 1.0)
+                for s, p in preds
+                if p is not None and s in own.index and own[s]
+            ]
+            if ys:
+                domains_2026[crop] = {
+                    "yield": [round_or_none(min(ys), 3), round_or_none(max(ys), 3)],
+                    "anomaly": (
+                        [round_or_none(-max(abs(min(an)), abs(max(an))), 1),
+                         round_or_none(max(abs(min(an)), abs(max(an))), 1)]
+                        if an else None
+                    ),
+                }
+        # the 2026 rainfall deficit, against each district's own median
+        rm = {d["s"]: d["rmed"] for d in districts}
+        de = [
+            100.0 * (1.0 - v / rm[k])
+            for k, v in (marker.get("per_district") or {}).items()
+            if rm.get(k) and v
+        ]
+        if de:
+            lim = round_or_none(max(abs(min(de)), abs(max(de))), 1)
+            domains_2026["deficit"] = [-lim, lim]
+
+    # -- the state mean kharif rainfall, by season ----------------------------
+    # The 2026 state mean (488 mm) needs a state-wise base to be read
+    # against, and the report and the dashboard must quote the SAME base.
+    # The base is the mean of the nine seasonal state means, 2014-15 to
+    # 2022-23: each season counts once, so a season with fewer reporting
+    # districts does not weigh less.
+    rain_by_season = (
+        panel.groupby("season")["rain_mm"].mean().round(1).to_dict()
+    )
+    rain_state = {
+        "per_season": rain_by_season,
+        "avg_9season": round(float(sum(rain_by_season.values()) / len(rain_by_season)), 1),
+        "primary_avg": round(
+            float(
+                panel[panel["season"] >= cfg.PRIMARY_PANEL_START]
+                .groupby("season")["rain_mm"]
+                .mean()
+                .mean()
+            ),
+            1,
+        ),
+        "definition": (
+            "the mean of the seasonal state means over 2014-15 to 2022-23; "
+            "each season counts once"
+        ),
+    }
+
     bundle = {
         "meta": meta,
         "crops": crops,
@@ -453,7 +524,9 @@ def main() -> None:
         "forecast_meta": forecast_meta,
         "models": models,
         "domains": {**domains, "deficit": [-deficit_lim, deficit_lim]},
+        "domains_2026": domains_2026,
         "marker": marker,
+        "rain_state": rain_state,
         "window_sensitivity": window_sensitivity,
     }
 

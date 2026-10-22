@@ -728,6 +728,84 @@ main {
    ============================================================================= */
 .table-wrap { overflow-x: auto; }
 
+/* the state summary: the 2026 totals against the Telangana average */
+.state-summary {
+  margin-bottom: var(--space-6);
+}
+
+.state-summary__caption {
+  max-width: none;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-ink-muted);
+  margin-bottom: var(--space-2);
+}
+
+.state-summary__table {
+  width: 100%;
+  max-width: 46rem;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.state-summary__table th,
+.state-summary__table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-rule);
+  font-variant-numeric: tabular-nums;
+}
+
+.state-summary__table thead th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-rule-strong);
+  white-space: nowrap;
+}
+
+.state-summary__table th.num,
+.state-summary__table td.num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.state-summary__crop {
+  font-weight: 600;
+  color: var(--color-ink);
+  text-align: left;
+}
+
+/* the change rides in the 2026 cell, beside the value */
+.state-summary__delta {
+  display: inline-block;
+  margin-left: 2ch;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* the tint belongs to the whole cell in the districts table; here the label
+   sits inside the value, so it keeps the colour and drops the fill */
+.state-summary__delta.diff-cell--down,
+.state-summary__delta.diff-cell--up {
+  background: none;
+  font-weight: 600;
+}
+
+.state-summary__note {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+  margin-top: var(--space-2);
+  max-width: 78ch;
+}
+
 /* the 2026 forecast table */
 #forecastTable th {
   text-align: left;

@@ -83,10 +83,15 @@
   /* ---------------------------------------------------------------------- *
    * State
    * ---------------------------------------------------------------------- */
+  // the season key for the 2026 forecast.  It is not a DES season: there are
+  // no 2026 yield observations, so every value shown under it is a
+  // prediction, and the label says so wherever it appears.
+  var SEASON_2026 = "2026-27";
+
   var state = {
     crop: D.modelled_crops[0],
-    season: D.seasons[D.seasons.length - 1],
-    metric: "anomaly",
+    season: SEASON_2026,
+    metric: "yield",
     pinned: null,
     // the crops ticked in the forecast chart; null means "all of them"
     forecastCrops: null,
@@ -122,6 +127,8 @@
     forecastDetail: document.getElementById("forecastDetail"),
     forecastDetailEmpty: document.getElementById("forecastDetailEmpty"),
     forecastDetailBody: document.getElementById("forecastDetailBody"),
+    stateSummaryBody: document.querySelector("#stateSummary tbody"),
+    stateSummaryNote: document.getElementById("stateSummaryNote"),
     forecastTableBody: document.querySelector("#forecastTable tbody"),
     forecastTableSubtitle: document.getElementById("forecastTableSubtitle"),
     forecastTableFoot: document.getElementById("forecastTableFoot"),
@@ -283,6 +290,7 @@
   }
 
   function valueForDistrict(slug) {
+    if (isForecastSeason()) return forecastValueForDistrict(slug);
     var v = districtValue(state.crop, state.season, slug);
     if (!v) return null;
     if (state.metric === "anomaly") return v[1];
@@ -295,12 +303,83 @@
     return 100.0 * (1.0 - v[2] / ref);
   }
 
+  /* ---------------------------------------------------------------------- *
+   * The 2026 layer.  There are no 2026 yield observations, so every value
+   * under the 2026-27 season is a prediction, and the layer is labelled as
+   * one wherever it appears.
+   * ---------------------------------------------------------------------- */
+  function isForecastSeason() {
+    return state.season === SEASON_2026;
+  }
+
+  function forecastFor(crop) {
+    return (D.forecast || {})[crop] || null;
+  }
+
+  function forecastRow(crop, slug) {
+    var f = forecastFor(crop);
+    if (!f) return null;
+    var hit = null;
+    f.per_district.forEach(function (r) {
+      if (r.slug === slug) hit = r;
+    });
+    return hit;
+  }
+
+  // the district's own mean observed yield, the reference its prediction is
+  // read against
+  function districtOwnMeanYield(crop, slug) {
+    var bySeason = D.panel[crop] || {};
+    var vals = [];
+    D.districts.forEach(function (d, i) {
+      if (d.s !== slug) return;
+      Object.keys(bySeason).forEach(function (season) {
+        var v = bySeason[season][i];
+        if (v && v[0] !== null && v[0] !== undefined) vals.push(v[0]);
+      });
+    });
+    if (!vals.length) return null;
+    var sum = vals.reduce(function (a, b) { return a + b; }, 0);
+    return sum / vals.length;
+  }
+
+  function forecastValueForDistrict(slug) {
+    var row = forecastRow(state.crop, slug);
+    if (!row) return null;
+    if (state.metric === "yield") return row.predicted_2026;
+    if (state.metric === "anomaly") {
+      // the prediction against that district's OWN observed mean yield
+      var own = districtOwnMeanYield(state.crop, slug);
+      if (!own) return null;
+      return 100.0 * (row.predicted_2026 / own - 1.0);
+    }
+    // rainfall deficit: the 2026 rainfall against this district's own median
+    var ref = districtRefMedian(slug);
+    var rain = (D.marker || {}).per_district
+      ? D.marker.per_district[slug] : null;
+    if (ref === null || !rain) return null;
+    return 100.0 * (1.0 - rain / ref);
+  }
+
   function districtRefMedian(slug) {
     var d = D.districts.find(function (x) { return x.s === slug; });
     return d && d.rmed !== undefined && d.rmed !== null ? d.rmed : null;
   }
 
   function domainFor() {
+    // The prediction layer has its own fixed domain, so that the 2026
+    // predictions - which occupy the middle of the observed range - are not
+    // all compressed into one pale band of the observed scale.  It is still
+    // fixed: it does not move with the selection.
+    var d26 = D.domains_2026 || null;
+    if (isForecastSeason() && d26) {
+      if (state.metric === "deficit") return d26.deficit || [-100, 100];
+      var crop26 = d26[state.crop] || null;
+      if (crop26) {
+        if (state.metric === "anomaly" && crop26.anomaly) return crop26.anomaly;
+        if (state.metric === "yield") return crop26.yield;
+      }
+    }
     if (state.metric === "deficit") {
       return (D.domains && D.domains.deficit) || [-100, 100];
     }
@@ -363,6 +442,29 @@
   /* The permanent label on each polygon carries the value; the richer hover
      detail lives in a card so the map never depends on colour alone. */
   function showHoverCard(slug, evt) {
+    if (isForecastSeason()) {
+      var fr = forecastRow(state.crop, slug);
+      if (!fr) {
+        hoverCard.innerHTML =
+          "<strong>" + esc(districtLabel(slug)) + "</strong><br>No prediction for 2026";
+      } else {
+        var f = forecastFor(state.crop);
+        hoverCard.innerHTML =
+          "<strong>" + esc(districtLabel(slug)) + "</strong><br>" +
+          "2026-27 · prediction<br>" +
+          "predicted yield/area " + fmt(fr.predicted_2026, 2) + " " + f.unit + "<br>" +
+          "state average " + fmt(f.state.reference_yield_per_ha, 2) + " " + f.unit +
+          " (" + (fr.pct_vs_state > 0 ? "+" : "") + fr.pct_vs_state + "% vs the state)<br>" +
+          "2026 kharif rainfall " + fmt(fr.rain_2026_mm, 0) + " mm" +
+          (districtRefMedian(slug) !== null
+            ? "<br>vs own median " + fmt(districtRefMedian(slug), 0) + " mm (" +
+              fmt(100 * (1 - fr.rain_2026_mm / districtRefMedian(slug)), 0) + "% deficit)"
+            : "") + "<br>" +
+          "area baseline " + fmt(fr.area_2022_23_ha, 0) + " ha (2022-23)";
+      }
+      positionHoverCard(evt);
+      return;
+    }
     var v = districtValue(state.crop, state.season, slug);
     if (!v) {
       hoverCard.innerHTML =
@@ -380,6 +482,10 @@
         "anomaly " + fmt(v[1], 0) + "%<br>" +
         "longest dry run " + v[3] + " d · heat days " + v[5];
     }
+    positionHoverCard(evt);
+  }
+
+  function positionHoverCard(evt) {
     var rect = els.map.getBoundingClientRect();
     var x = evt.originalEvent.clientX - rect.left;
     var y = evt.originalEvent.clientY - rect.top;
@@ -426,17 +532,23 @@
       '<span class="legend__ramp" style="background:' + gradient + '"></span>' +
       "<span>" + fmt(hi, 1) + "</span>" +
       '<span style="color:var(--color-ink-muted)">· ' + what + " (" + unit + ")</span>";
+    // the 2026 layer has its own fixed domain, so the caption says so rather
+    // than claiming the scale is the observed one
+    var scope = isForecastSeason()
+      ? "the fixed domain of the 2026 prediction for this crop, not the observed range — " +
+        "the predictions occupy the middle of the observed range and would otherwise all land in one pale band"
+      : "fixed domain across every season — the scale never rescales";
     els.legendCaption.textContent =
       state.metric === "anomaly"
-        ? "Colormap " + name + ", fixed domain across every season — the scale never rescales. " +
+        ? "Colormap " + name + ", " + scope + ". " +
           "Blue is below normal, cream is normal, red is above normal. Districts with no observation are grey."
         : state.metric === "deficit"
-        ? "Colormap " + name + ", fixed domain across every season. " +
+        ? "Colormap " + name + ", " + scope + ". " +
           "Rainfall this season against that district's own 2016-17–2022-23 median: " +
           "a positive value is a shortfall and dark red is a large one, so the scale reads as drought severity. " +
           "The reference is each district's own norm, so the map shows where a season was dry " +
           "for that district rather than for the state. Districts with no observation are grey."
-        : "Colormap " + name + ", fixed domain across every season. Absolute yield across Telangana is " +
+        : "Colormap " + name + ", " + scope + ". Absolute yield across Telangana is " +
           "dominated by soil and irrigation, so this view reads as a soil map, not a risk map; " +
           "the anomaly view is the risk view.";
   }
@@ -498,6 +610,68 @@
         hovertemplate: "%{x}<br>median %{y:.1f} " + unit + "<extra></extra>"
       }
     ];
+
+    /* The 2026 point, on the same chart and the same axis.  It is drawn
+     * DASHED, exactly as on the forecast chart, because nothing has been
+     * observed for it: the rainfall is ERA5 reanalysis for a season that has
+     * not happened, and the yield is a model prediction.  The band keeps the
+     * same meaning - the p10-p90 range across the districts. */
+    var f26 = forecastFor(crop);
+    if (f26) {
+      var vals26 = [];
+      if (kind === "rain") {
+        var pd26 = (D.marker || {}).per_district || {};
+        Object.keys(pd26).forEach(function (k) { vals26.push(pd26[k]); });
+      } else {
+        f26.per_district.forEach(function (r) {
+          if (r.predicted_2026 !== null && r.predicted_2026 !== undefined) {
+            vals26.push(r.predicted_2026);
+          }
+        });
+      }
+      if (vals26.length) {
+        vals26.sort(function (a, b) { return a - b; });
+        function quantile(q) {
+          var pos = (vals26.length - 1) * q;
+          var lo = Math.floor(pos), hi = Math.ceil(pos);
+          return vals26[lo] + (vals26[hi] - vals26[lo]) * (pos - lo);
+        }
+        var p10 = quantile(0.1), p50 = quantile(0.5), p90 = quantile(0.9);
+        var lastX = x[x.length - 1];
+        var lastMid = mid[mid.length - 1];
+
+        // the band polygon is rebuilt with the 2026 category added, so the
+        // band keeps its meaning: the p10-p90 range across the districts
+        traces[0].x = x.concat([SEASON_2026], x.slice().reverse());
+        traces[0].y = hi.concat([p90], lo.slice().reverse());
+
+        traces.push({
+          x: [lastX, SEASON_2026],
+          y: [lastMid, p50],
+          type: "scatter",
+          mode: "lines",
+          line: { color: colour, width: 2, dash: "dash" },
+          showlegend: false,
+          hoverinfo: "skip"
+        });
+        traces.push({
+          x: [SEASON_2026],
+          y: [p50],
+          type: "scatter",
+          mode: "markers",
+          marker: {
+            color: colour, size: 9, symbol: "diamond",
+            line: { color: "#fffdf9", width: 2 }
+          },
+          name: "2026 prediction",
+          showlegend: false,
+          hovertemplate:
+            "2026-27 · prediction<br>median %{y:.1f} " + unit +
+            "<br>p10–p90 " + p10.toFixed(1) + "–" + p90.toFixed(1) + " " + unit +
+            "<extra></extra>"
+        });
+      }
+    }
 
     if (state.pinned) {
       var pin = D.marker && D.marker.available ? null : null;
@@ -595,8 +769,31 @@
    * retired in v1.2.0, but the export still ships the same rows.
    * ---------------------------------------------------------------------- */
   function tableRows() {
-    var rows = panelFor(state.crop, state.season) || [];
     var out = [];
+
+    // the 2026 layer: the predictions, not observations
+    if (isForecastSeason()) {
+      var f = forecastFor(state.crop);
+      if (f) {
+        f.per_district.forEach(function (r) {
+          var ref = districtRefMedian(r.slug);
+          out.push({
+            slug: r.slug,
+            label: r.label,
+            rain: r.rain_2026_mm,
+            yield: r.predicted_2026,
+            anomaly: r.pct_vs_state,
+            dry: r.dry_run_max,
+            heat: r.heat_days,
+            deficit: ref && r.rain_2026_mm
+              ? 100 * (1 - r.rain_2026_mm / ref) : null
+          });
+        });
+      }
+      return out;
+    }
+
+    var rows = panelFor(state.crop, state.season) || [];
     rows.forEach(function (v, i) {
       if (!v) return;
       var ref = districtRefMedian(D.districts[i].s);
@@ -938,6 +1135,7 @@
     drawForecastChart();
     renderForecastLegend();
     renderForecastFoot();
+    renderStateSummary();
     renderForecastTable();
   }
 
@@ -945,7 +1143,7 @@
     var el = els.forecastChart;
     var fc = D.forecast || {};
     var seasons = D.all_seasons || D.seasons;
-    var xAxis = seasons.concat(["2026"]);
+    var xAxis = seasons.concat([SEASON_2026]);
     var boundaryAt = seasons.indexOf(D.primary_panel_start) - 0.5;
     var crops = tickedCrops();
     var one = crops.length === 1;
@@ -1013,7 +1211,7 @@
       if (last && endIndex !== null) {
         scaleVals.push(endIndex);
         traces.push({
-          x: [last.season, "2026"],
+          x: [last.season, SEASON_2026],
           y: [last.index, endIndex],
           type: "scatter",
           mode: "lines",
@@ -1023,7 +1221,7 @@
           hoverinfo: "skip"
         });
         traces.push({
-          x: ["2026"],
+          x: [SEASON_2026],
           y: [endIndex],
           type: "scatter",
           mode: "markers",
@@ -1035,7 +1233,7 @@
           showlegend: false,
           customdata: [[crop, endIndex, st.yield_2026_per_ha, unit]],
           hovertemplate:
-            cropTitle(crop) + " · 2026 predicted yield/area " +
+            cropTitle(crop) + " · 2026-27 predicted yield/area " +
             "%{customdata[2]:.3f} " + "%{customdata[3]}" +
             "<br>index %{customdata[1]:.1f}<extra></extra>"
         });
@@ -1256,6 +1454,86 @@
   /* ---------------------------------------------------------------------- *
    * The 2026 forecast table: every district against the state-wide mean
    * ---------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------- *
+   * The state in one table: the 2026 totals for the four crops and the
+   * kharif rainfall, against the Telangana average.  The crop name is the
+   * parent header; 2026 and the state average are the two columns under it.
+   * ---------------------------------------------------------------------- */
+  function millions(value) {
+    // everything is in millions, with enough decimals to stay meaningful:
+    // moong is 20 thousand tonnes, which two decimals would round to
+    // nothing
+    var m = value / 1e6;
+    var digits = Math.abs(m) >= 1 ? 2 : 3;
+    return m.toFixed(digits);
+  }
+
+  function renderStateSummary() {
+    var body = els.stateSummaryBody;
+    if (!body) return;
+    var fc = D.forecast || {};
+    var crops = forecastCrops();
+    if (!crops.length) {
+      body.innerHTML = "";
+      els.stateSummaryNote.textContent = "The 2026 forecast has not been computed in this build.";
+      return;
+    }
+
+    var rows = crops.map(function (crop) {
+      var f = fc[crop];
+      var st = f.state;
+      var unit = f.unit;
+      var isBales = unit === "bales/ha";
+      var unitLabel = isBales ? "M bales" : "M t";
+      var pct = st.pct_vs_reference;
+      var cls = pct < 0 ? "diff-cell--down" : (pct > 0 ? "diff-cell--up" : "diff-cell--flat");
+      return {
+        label: cropTitle(crop),
+        value: millions(st.total_2026) + " " + unitLabel,
+        avg: millions(st.reference_total_same_area) + " " + unitLabel,
+        delta: (pct > 0 ? "\u2191" : pct < 0 ? "\u2193" : "") + Math.abs(pct).toFixed(1) + "%",
+        cls: cls
+      };
+    });
+
+    // the kharif rainfall: the state mean for 2026 against the state-wise
+    // average over the nine observed seasons
+    var rs = D.rain_state || null;
+    var mk = D.marker || null;
+    if (rs && mk && mk.available) {
+      var base = rs.avg_9season;
+      var now = mk.state_mean;
+      var pctR = 100.0 * (now / base - 1.0);
+      rows.push({
+        label: "Kharif rainfall",
+        value: fmt(now, 0) + " mm",
+        avg: fmt(base, 0) + " mm",
+        delta: (pctR > 0 ? "\u2191" : "\u2193") + Math.abs(pctR).toFixed(1) + "%",
+        cls: pctR < 0 ? "diff-cell--down" : "diff-cell--up"
+      });
+    }
+
+    body.innerHTML = rows.map(function (r) {
+      return (
+        "<tr>" +
+          "<th scope='row' class='state-summary__crop'>" + esc(r.label) + "</th>" +
+          "<td class='num'>" + esc(r.value) +
+            " <span class='state-summary__delta " + r.cls + "'>" + esc(r.delta) + "</span>" +
+          "</td>" +
+          "<td class='num'>" + esc(r.avg) + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+
+    els.stateSummaryNote.textContent =
+      "Totals are for the whole state: the 2026 prediction is the area-weighted " +
+      "yield per hectare applied to each district's 2022-23 kharif area, and the " +
+      "average is the Telangana average on that same area, so the two columns " +
+      "differ only by the model's skill. Rainfall is the state mean; the average " +
+      "is the mean of the nine seasonal state means, 2014-15 to 2022-23 (" +
+      fmt(rs ? rs.avg_9season : 0, 0) + " mm).";
+  }
+
   function renderForecastTable() {
     var crop = state.crop;
     var f = (D.forecast || {})[crop];
@@ -1510,12 +1788,17 @@
   function renderReadout() {
     var rows = panelFor(state.crop, state.season) || [];
     var vals = rows.filter(function (r) { return !!r; });
-    var rain = vals.map(function (r) { return r[2]; });
-    var yl = vals.map(function (r) { return r[0]; });
+    var nDistricts = vals.length;
+    if (isForecastSeason()) {
+      var f = forecastFor(state.crop);
+      nDistricts = f ? f.per_district.length : 0;
+    }
     var pinned = state.pinned ? districtValue(state.crop, state.season, state.pinned) : null;
 
     els.readNote.textContent =
-      state.season + " · " + vals.length + " districts observed" +
+      (isForecastSeason() ? state.season + " (prediction)" : state.season) +
+      " · " + nDistricts + " districts" +
+      (isForecastSeason() ? " predicted" : " observed") +
       (pinned ? " · pinned: " + districtLabel(state.pinned) : "");
 
     els.yieldTitle.innerHTML =
@@ -1575,7 +1858,8 @@
     renderForecast();
 
     els.mapNote.textContent =
-      state.season + " · " + cropTitle(state.crop) + " · " +
+      (isForecastSeason() ? state.season + " (prediction)" : state.season) +
+      " · " + cropTitle(state.crop) + " · " +
       (state.metric === "anomaly" ? "yield anomaly (%)"
        : state.metric === "deficit" ? "rainfall deficit (%)"
        : "absolute yield (" + unitOf(state.crop) + ")");
@@ -1618,7 +1902,16 @@
       opt.textContent = s;
       els.season.appendChild(opt);
     });
+    // the 2026 prediction is not a DES season: there are no 2026 yield
+    // observations, so it is offered as a separate, labelled option
+    if (D.forecast && Object.keys(D.forecast).length) {
+      var opt26 = document.createElement("option");
+      opt26.value = SEASON_2026;
+      opt26.textContent = "2026-27 (prediction)";
+      els.season.appendChild(opt26);
+    }
     els.season.value = state.season;
+    els.metric.value = state.metric;
 
     els.dataVersion.textContent = META.data_version;
   }
